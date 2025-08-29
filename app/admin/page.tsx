@@ -17,7 +17,7 @@ import { Upload, Download, Search } from "lucide-react"
 import { authApi, menuApi, ordersApi } from "@/lib/api"
 import * as XLSX from 'xlsx';
 import { useOrders } from "@/components/orders-provider"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
 
 export default function AdminPage() {
@@ -670,6 +670,9 @@ export default function AdminPage() {
                   <DialogContent className="space-y-4 w-auto max-w-none">
                      <DialogHeader>
                         <DialogTitle>Экспорт отчёта</DialogTitle>
+                        <DialogDescription>
+                           Выберите период и скачайте Excel-отчёт
+                        </DialogDescription>
                      </DialogHeader>
 
                      <div className="grid gap-4">

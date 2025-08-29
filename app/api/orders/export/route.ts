@@ -11,9 +11,6 @@ export async function POST(request: NextRequest) {
          s_t_data: JSON.stringify(exportExcelOrderData.s_t_data)
       }
 
-      // // Send email notification (mock)
-      // await sendOrderEmail(order)
-
       const formBody = new URLSearchParams(body).toString();
       const response = await fetch('https://ibronevik.ru/taxi/c/0/api/v1/script/template/orders_report/', {
          method: 'POST',
@@ -100,15 +97,6 @@ export async function GET(request: NextRequest) {
          { status: 500 },
       )
    }
-}
-
-async function sendOrderEmail(order: any) {
-   // Mock email sending - integrate with your email service
-   console.log("Sending order email:", {
-      to: "kendalafoodservise@gmail.com",
-      subject: `${isUrgent(order) ? "[СРОЧНО] " : ""}Новый заказ ${order.id}`,
-      order,
-   })
 }
 
 function isUrgent(order: any): boolean {
