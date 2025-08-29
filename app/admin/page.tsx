@@ -17,6 +17,8 @@ import { Upload, Download, Search } from "lucide-react"
 import { authApi, menuApi, ordersApi } from "@/lib/api"
 import * as XLSX from 'xlsx';
 import { useOrders } from "@/components/orders-provider"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Calendar } from "@/components/ui/calendar"
 
 export default function AdminPage() {
    const { t } = useLanguage()
@@ -39,6 +41,12 @@ export default function AdminPage() {
    const [loginType, setLoginType] = useState<"phone" | "email" | undefined>()
    const [dishes, setDishes] = useState<string>()
    const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+   const [isExportOpen, setIsExportOpen] = useState(false)
+   const [period, setPeriod] = useState<{ from: Date | undefined; to: Date | undefined }>({
+      from: new Date(),
+      to: new Date(),
+   })
+   const [isLoadingExport, setIsLoadingExport] = useState(false)
 
    const normalizePhone = (val: string) => val.replace(/[^\d]/g, "") // только цифры
 
@@ -300,12 +308,49 @@ export default function AdminPage() {
       return matchesSearch && matchesStatus
    })
 
-   const exportToExcel = () => {
-      // Mock export functionality
-      toast({
-         title: t("common.success"),
-         description: "Экспорт в Excel начат",
-      })
+   const exportToExcel = async () => {
+      if (!period.from || !period.to) {
+         toast({
+            title: t("common.error"),
+            description: "Выберите период",
+            variant: "destructive",
+         })
+         return
+      }
+
+      try {
+         setIsLoadingExport(true)
+
+         const blob = await ordersApi.exportOrders({
+            token: token,
+            u_hash: hash,
+            is_var: 1,
+            s_t_data: {
+               date_from: period.from.toISOString(),
+               date_to: period.to.toISOString(),
+            },
+         })
+
+         const url = window.URL.createObjectURL(blob);
+         const link = document.createElement('a');
+         link.href = url;
+         link.download = 'export.xlsx';
+         document.body.appendChild(link);
+         link.click();
+         link.remove();
+         window.URL.revokeObjectURL(url);
+
+         toast({ title: t("common.success"), description: "Отчёт сформирован" })
+         setIsExportOpen(false)
+      } catch (err: any) {
+         toast({
+            title: t("common.error"),
+            description: err.message || "Не удалось сформировать отчёт",
+            variant: "destructive",
+         })
+      } finally {
+         setIsLoadingExport(false)
+      }
    }
 
    if (!isLoggedIn) {
@@ -514,7 +559,7 @@ export default function AdminPage() {
                      <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                            <span>Управление заказами</span>
-                           <Button onClick={exportToExcel} variant="outline" className="flex items-center gap-2 bg-transparent">
+                           <Button onClick={() => setIsExportOpen(true)} variant="outline" className="flex items-center gap-2 bg-transparent">
                               <Download className="h-4 w-4" />
                               Экспорт в Excel
                            </Button>
@@ -621,6 +666,31 @@ export default function AdminPage() {
                      </CardContent>
                   </Card>
                </TabsContent>
+               <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
+                  <DialogContent className="space-y-4 w-auto max-w-none">
+                     <DialogHeader>
+                        <DialogTitle>Экспорт отчёта</DialogTitle>
+                     </DialogHeader>
+
+                     <div className="grid gap-4">
+                        <Label>Период</Label>
+                        <Calendar
+                           mode="range"
+                           selected={period}
+                           onSelect={(v) => setPeriod({ from: v?.from, to: v?.to })}
+                           numberOfMonths={1}
+                        />
+                     </div>
+
+                     <Button
+                        onClick={exportToExcel}
+                        disabled={isLoadingExport || !period.from || !period.to}
+                        className="w-full"
+                     >
+                        {isLoadingExport ? "Формируем..." : "Скачать отчёт"}
+                     </Button>
+                  </DialogContent>
+               </Dialog>
             </Tabs>
          </div>
       </div>

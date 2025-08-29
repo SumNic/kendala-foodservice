@@ -40,14 +40,6 @@ export async function POST(request: NextRequest) {
          },
          body: formBody
       })
-
-      const opts = {
-         method: 'POST',
-         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-         },
-         body: formBody
-      }
       
       const responseData = await registrData.json();
 

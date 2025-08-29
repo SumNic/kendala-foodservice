@@ -77,6 +77,16 @@ export interface TokenAndHash {
 	}
 }
 
+export interface ExportExcelOrder {
+	token?: string
+	u_hash?: string
+	is_var: number
+	s_t_data: {
+		date_from: string
+		date_to: string
+	}
+}
+
 // Auth API
 export const authApi = {
 	async register(data: RegisterPayload): Promise<ApiResponse<any>> {
@@ -148,7 +158,7 @@ export const ordersApi = {
 
 	async getOrders(data: TokenAndHash['data']): Promise<ApiResponse<any>> {
 		try {
-				const response = await fetch(`${API_BASE_URL}/api/orders/get`, {
+			const response = await fetch(`${API_BASE_URL}/api/orders/get`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -174,6 +184,21 @@ export const ordersApi = {
 		} catch (error) {
 			return { success: false, error: "Network error" }
 		}
+	},
+
+	async exportOrders(params: ExportExcelOrder): Promise<Blob> {
+		const response = await fetch(`${API_BASE_URL}/api/orders/export`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(params),
+		})
+		if (!response.ok) {
+			throw new Error(`Ошибка экспорта: ${response.status}`);
+		}
+
+		return await response.blob()
 	},
 }
 
@@ -204,23 +229,5 @@ export const kitchenApi = {
 		} catch (error) {
 			return { success: false, error: "Network error" }
 		}
-	},
-}
-
-// Export API
-export const exportApi = {
-	async exportOrders(params: {
-		startDate: string
-		endDate: string
-		format: "excel" | "csv"
-	}): Promise<Blob> {
-		const response = await fetch(`${API_BASE_URL}/export/orders`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(params),
-		})
-		return await response.blob()
 	},
 }
