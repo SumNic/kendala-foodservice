@@ -1,4 +1,5 @@
 // API utility functions for backend integration
+import { DayMenu } from "@/app/page"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -141,14 +142,14 @@ export const menuApi = {
 
 // Orders API
 export const ordersApi = {
-	async createOrder(order: Order): Promise<ApiResponse<Order>> {
+	async createOrder(order: Order, menu: DayMenu[]): Promise<ApiResponse<Order>> {
 		try {
 			const response = await fetch(`${API_BASE_URL}/api/orders/add`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(order),
+				body: JSON.stringify({order, menu}),
 			})
 			return await response.json()
 		} catch (error) {

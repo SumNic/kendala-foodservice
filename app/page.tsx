@@ -196,7 +196,7 @@ export default function OrderPage() {
          timestamp: new Date().toISOString(),
       }
 
-      const res = await ordersApi.createOrder(orderData)
+      const res = await ordersApi.createOrder(orderData, menu)
 
       if (res.success) {
          toast({ title: t("common.success"), description: "Заказ успешно оформлен!" })
