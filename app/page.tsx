@@ -268,21 +268,25 @@ export default function OrderPage() {
 
                                     {isSelected && (
                                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                                          <div>
-                                             <Label className="text-xs">Время доставки</Label>
-                                             <Input
-                                                type="time"
-                                                lang="ru"
+                                          <div className="flex flex-col items-center">
+                                             <Label className="text-xs py-0.5">Время доставки</Label>
+                                             <select
                                                 value={orderDay.deliveryTime}
                                                 onChange={(e) => updateOrderDay(dayMenu.day, { deliveryTime: e.target.value })}
-                                                min="12:00"        // разрешённое раннее время
-                                                max="15:30"        // разрешённое позднее время
-                                                step="300"         // шаг в секундах (здесь – 5 минут)
-                                                className="w-24"
-                                             />
+                                                className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
+                                             >
+                                                <option value="12:00">12:00 - 12:30</option>
+                                                <option value="12:30">12:30 - 13:00</option>
+                                                <option value="13:00">13:00 - 13:30</option>
+                                                <option value="13:30">13:30 - 14:00</option>
+                                                <option value="14:00">14:00 - 14:30</option>
+                                                <option value="14:30">14:30 - 15:00</option>
+                                                <option value="15:00">15:00 - 15:30</option>
+                                                <option value="15:30">15:30 - 16:00</option>
+                                             </select>
                                           </div>
-                                          <div>
-                                             <Label className="text-xs">Количество</Label>
+                                          <div className="flex flex-col items-center">
+                                             <Label className="text-xs py-0.5">Количество</Label>
                                              <Input
                                                 type="number"
                                                 min="1"
