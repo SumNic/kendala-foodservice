@@ -6,6 +6,8 @@ import { LanguageProvider } from "@/components/language-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { OrdersProvider } from "@/components/orders-provider"
 import { cookies } from "next/headers"
+import { YandexMetrica } from "@/lib/metrics/yandexMetrics";
+import { YandexRouterTracker } from "@/lib/metrics/YandexRouterTracker"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -29,6 +31,8 @@ export default function RootLayout({
             <LanguageProvider>
                <OrdersProvider initialToken={token} initialHash={hash}>
                   {children}
+                  <YandexMetrica />
+                  <YandexRouterTracker />
                </OrdersProvider>
                <Toaster />
             </LanguageProvider>

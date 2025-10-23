@@ -20,6 +20,12 @@ import { useOrders } from "@/components/orders-provider"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
 
+interface BaseStyles {
+   default: string,
+   secondary: string,
+   outline: string
+};
+
 export default function AdminPage() {
    const { t } = useLanguage()
    const { orders, token, setToken, hash, setHash, getOrders } = useOrders()
@@ -287,17 +293,31 @@ export default function AdminPage() {
       setOpenOrderId(prev => prev === orderId ? null : orderId);
    };
 
+   const statusMap = {
+      new: { label: "Новый", variant: "default" as const },
+      accepted: { label: "Принят", variant: "secondary" as const },
+      paid: { label: "Оплачен", variant: "outline" as const },
+      delivered: { label: "Доставлен", variant: "default" as const },
+   }
    const getStatusBadge = (status: string) => {
-      const statusMap = {
-         new: { label: "Новый", variant: "default" as const },
-         accepted: { label: "Принят", variant: "secondary" as const },
-         paid: { label: "Оплачен", variant: "outline" as const },
-         delivered: { label: "Доставлен", variant: "default" as const },
-      }
 
       const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.new
       return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
    }
+
+   const getVariantStyle = (variant: string, isSelected: boolean) => {
+      if (isSelected) {
+         return "bg-blue-50 text-blue-600 font-medium";
+      }
+
+      const baseStyles: BaseStyles = {
+         default: "hover:bg-gray-50",
+         secondary: "hover:bg-gray-50 text-gray-700",
+         outline: "hover:bg-gray-50 border border-gray-200"
+      };
+
+      return baseStyles[variant as keyof BaseStyles] || baseStyles.default;
+   };
 
    const filteredOrders = orders.filter((order) => {
       const matchesSearch =
@@ -631,24 +651,33 @@ export default function AdminPage() {
                                                    top: "70%",
                                                    left: 0,
                                                    background: "white",
-                                                   border: "none",
-                                                   zIndex: 10
+                                                   border: "1px solid #d1d5db",
+                                                   borderRadius: "0.375rem",
+                                                   zIndex: 10,
+                                                   boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                                                   minWidth: "120px"
                                                 }}
                                              >
-                                                <select
-                                                   value={"all"}
-                                                   onChange={(e) => {
-                                                      if (order.id) handleStatusChange(order.id, e.target.value)
-                                                   }
-                                                   }
-                                                   className="py-2 border border-gray-300 rounded-md text-center"
-                                                >
-                                                   <option value="all" hidden>Статус</option>
-                                                   <option value="new">Новый</option>
-                                                   <option value="accepted">Принят</option>
-                                                   <option value="paid">Оплачен</option>
-                                                   <option value="delivered">Доставлен</option>
-                                                </select>
+                                                {Object.entries(statusMap).map(([value, status]) => (
+                                                   <div
+                                                      key={value}
+                                                      onClick={() => {
+                                                         if (order.id) handleStatusChange(order.id, value)
+                                                      }}
+                                                      className={`py-2 px-3 cursor-pointer transition-colors text-sm
+                                                         ${order.status === value
+                                                            ? getVariantStyle(status.variant, true)
+                                                            : getVariantStyle(status.variant, false)
+                                                         }
+                                                         ${value !== "delivered" ? "border-b border-gray-100" : ""}
+                                                      `}
+                                                      style={{
+                                                         borderBottom: value !== "delivered" ? "1px solid #f3f4f6" : "none"
+                                                      }}
+                                                   >
+                                                      {status.label}
+                                                   </div>
+                                                ))}
                                              </div>
                                           )}
                                        </TableCell>

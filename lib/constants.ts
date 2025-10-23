@@ -1,0 +1,3 @@
+export const PHONE_NUMBER="+7 771 400 4404";
+
+export const YANDEX_METRICA_ID =104811447;
