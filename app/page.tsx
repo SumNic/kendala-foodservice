@@ -18,6 +18,7 @@ import cloneDeep from "lodash/cloneDeep";
 import { useOrders } from "@/components/orders-provider"
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import { reachGoal } from "@/lib/metrics/yandexMetrics"
 
 export interface Dish {
    id: string
@@ -214,6 +215,7 @@ export default function OrderPage() {
          timestamp: new Date().toISOString(),
       }
 
+      reachGoal('createOrder')
       const res = await ordersApi.createOrder(orderData, menu)
 
       if (res.success) {
@@ -282,7 +284,10 @@ export default function OrderPage() {
                                     <div className="flex items-center gap-3 sm:flex-row">
                                        <Checkbox
                                           checked={isSelected}
-                                          onCheckedChange={() => dayMenu.isAvailable && toggleDay(dayMenu)}
+                                          onCheckedChange={() => {
+                                             dayMenu.isAvailable && toggleDay(dayMenu)
+                                             reachGoal('checkedDay')
+                                          }}
                                           disabled={!dayMenu.isAvailable}
                                           className="border-[#00A8E8]"
                                        />
@@ -352,10 +357,13 @@ export default function OrderPage() {
                                           <div
                                              key={dish.id}
                                              className={`bg-[#001F3F] border  rounded p-3 cursor-pointer transition-colors ${orderDay.selectedDishes.includes(dish.id)
-                                                ? "border-orange-500 bg-orange-50"
+                                                ? "border-orange-500 bg-[#003366]"
                                                 : "border-[#00A8E8]/30 md:hover:border-[#00A8E8] md:transition"
                                                 }`}
-                                             onClick={() => toggleDish(dayMenu.day, dish.id)}
+                                             onClick={() => {
+                                                toggleDish(dayMenu.day, dish.id)
+                                                reachGoal('selectDish')
+                                             }}
                                           >
                                              <div className="flex flex-col sm:flex-row justify-between items-start">
                                                 <div className="flex-1">
@@ -395,7 +403,10 @@ export default function OrderPage() {
                               <Input
                                  id="fullName"
                                  value={customerInfo.fullName}
-                                 onChange={(e) => setCustomerInfo({ ...customerInfo, fullName: e.target.value })}
+                                 onChange={(e) => {
+                                    setCustomerInfo({ ...customerInfo, fullName: e.target.value })
+                                    reachGoal('setCustomerInfo')
+                                 }}
                                  placeholder="Иванов Иван Иванович"
                                  className="bg-[#001F3F] border-[#00A8E8] text-white placeholder:text-[#87CEEB]"
                               />

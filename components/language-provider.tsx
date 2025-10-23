@@ -121,7 +121,6 @@ const translations = {
     "about.contacts.title": "Наши контакты",
     "about.whatsapp": "WhatsApp:",
     "about.phone": "Телефон:",
-    "about.contacts": "+7 771 400 4404",
   },
   kk: {
     // Header
@@ -224,8 +223,6 @@ const translations = {
     "about.contacts.title": "Байланыс деректеріміз",
     "about.whatsapp": "WhatsApp:",
     "about.phone": "Телефон:",
-    "about.contacts": "+7 771 400 4404",
-
   },
 }
 
