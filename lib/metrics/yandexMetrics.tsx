@@ -1,10 +1,10 @@
-import { YANDEX_METRICA_ID } from "@/lib/constants";
-import Script from "next/script";
+import { YANDEX_METRICA_ID } from "@/lib/constants"
+import Script from "next/script"
 
 export const YandexMetrica = () => (
-    <>
-        <Script id="ymetrica" strategy="afterInteractive">
-            {`
+  <>
+    <Script id="ymetrica" strategy="afterInteractive">
+      {`
                 (function(m,e,t,r,i,k,a){
                     m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
                     m[i].l=1*new Date();
@@ -20,20 +20,23 @@ export const YandexMetrica = () => (
                     trackLinks:true
                 });
             `}
-        </Script>
+    </Script>
 
-        {/* no-JS fallback */}
-        <noscript>
-            <div>
-                <img src={`https://mc.yandex.ru/watch/${YANDEX_METRICA_ID}`}
-                    style={{ position: "absolute", left: "-9999px" }} alt="" />
-            </div>
-        </noscript>
-    </>
-);
+    {/* no-JS fallback */}
+    <noscript>
+      <div>
+        <img
+          src={`https://mc.yandex.ru/watch/${YANDEX_METRICA_ID}`}
+          style={{ position: "absolute", left: "-9999px" }}
+          alt=""
+        />
+      </div>
+    </noscript>
+  </>
+)
 
 export const reachGoal = (name: string) => {
   if (typeof window !== "undefined" && window.ym) {
-    window.ym(YANDEX_METRICA_ID, "reachGoal", name);
+    window.ym(YANDEX_METRICA_ID, "reachGoal", name)
   }
-};
+}

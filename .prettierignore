@@ -1,0 +1,11 @@
+.next
+.vercel
+node_modules
+dist
+build
+coverage
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+components.json
+tsconfig.json
