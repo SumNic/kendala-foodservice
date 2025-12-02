@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
+import { Switch } from "@/components/ui/switch"
 
 interface BaseStyles {
   default: string
@@ -61,11 +62,15 @@ export default function AdminPage() {
   const [dishes, setDishes] = useState<string>()
   const [openOrderId, setOpenOrderId] = useState<string | null>(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
-  const [period, setPeriod] = useState<{ from: Date | undefined; to: Date | undefined }>({
+  const [period, setPeriod] = useState<{
+    from: Date | undefined
+    to: Date | undefined
+  }>({
     from: new Date(),
     to: new Date(),
   })
   const [isLoadingExport, setIsLoadingExport] = useState(false)
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
 
   const normalizePhone = (val: string) => val.replace(/[^\d]/g, "") // только цифры
 
@@ -103,6 +108,20 @@ export default function AdminPage() {
       setIsLoggedIn(true)
     }
   }, [token, hash])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("maintenance-mode")
+      setIsMaintenanceMode(stored === "true")
+    }
+  }, [])
+
+  const handleToggleMaintenance = (value: boolean) => {
+    setIsMaintenanceMode(value)
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("maintenance-mode", value ? "true" : "false")
+    }
+  }
 
   const handleLogin = async () => {
     if (!loginData.password) {
@@ -172,7 +191,10 @@ export default function AdminPage() {
 
     if (res.success) {
       if (registrationData.password) {
-        toast({ title: t("common.success"), description: "Регистрация успешна" })
+        toast({
+          title: t("common.success"),
+          description: "Регистрация успешна",
+        })
         setIsLoggedIn(true)
         window.location.href = "/admin"
       } else {
@@ -402,7 +424,10 @@ export default function AdminPage() {
                         id="reg-name"
                         value={registrationData.name}
                         onChange={(e) =>
-                          setRegistrationData({ ...registrationData, name: e.target.value })
+                          setRegistrationData({
+                            ...registrationData,
+                            name: e.target.value,
+                          })
                         }
                         placeholder="Иван Иванович Иванов"
                       />
@@ -413,7 +438,10 @@ export default function AdminPage() {
                         id="reg-login"
                         value={registrationData.login}
                         onChange={(e) =>
-                          setRegistrationData({ ...registrationData, login: e.target.value })
+                          setRegistrationData({
+                            ...registrationData,
+                            login: e.target.value,
+                          })
                         }
                         placeholder="+7xxx или your@mail.com"
                       />
@@ -423,7 +451,10 @@ export default function AdminPage() {
                         type="password"
                         value={registrationData.password}
                         onChange={(e) =>
-                          setRegistrationData({ ...registrationData, password: e.target.value })
+                          setRegistrationData({
+                            ...registrationData,
+                            password: e.target.value,
+                          })
                         }
                         placeholder="kendala2024"
                       />
@@ -437,7 +468,10 @@ export default function AdminPage() {
                           className="w-full border rounded-md px-2 py-1"
                           value={registrationData.method}
                           onChange={(e) =>
-                            setRegistrationData({ ...registrationData, method: e.target.value })
+                            setRegistrationData({
+                              ...registrationData,
+                              method: e.target.value,
+                            })
                           }
                         >
                           <option value="telegram">Telegram</option>
@@ -453,7 +487,10 @@ export default function AdminPage() {
                           id="reg-code"
                           value={registrationData.code}
                           onChange={(e) =>
-                            setRegistrationData({ ...registrationData, code: e.target.value })
+                            setRegistrationData({
+                              ...registrationData,
+                              code: e.target.value,
+                            })
                           }
                           placeholder="123456789"
                         />
@@ -477,7 +514,12 @@ export default function AdminPage() {
                         id="password"
                         type="password"
                         value={loginData.password}
-                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        onChange={(e) =>
+                          setLoginData({
+                            ...loginData,
+                            password: e.target.value,
+                          })
+                        }
                         placeholder="kendala2024"
                         required
                       />
@@ -531,7 +573,19 @@ export default function AdminPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{t("admin.title")}</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{t("admin.title")}</h1>
+            <div className="mt-2 flex items-center gap-2">
+              <Switch
+                checked={isMaintenanceMode}
+                onCheckedChange={handleToggleMaintenance}
+                id="maintenance-mode"
+              />
+              <Label htmlFor="maintenance-mode" className="text-sm text-gray-700">
+                Сайт на техобслуживании (показать предупреждение и отключить заказ)
+              </Label>
+            </div>
+          </div>
           <Button variant="outline" onClick={() => handleLogout()}>
             {t("admin.logout")}
           </Button>
@@ -691,7 +745,11 @@ export default function AdminPage() {
                                                                  false,
                                                                )
                                                          }
-                                                         ${value !== "delivered" ? "border-b border-gray-100" : ""}
+                                                         ${
+                                                           value !== "delivered"
+                                                             ? "border-b border-gray-100"
+                                                             : ""
+                                                         }
                                                       `}
                                     style={{
                                       borderBottom:

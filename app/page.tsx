@@ -19,6 +19,8 @@ import { useOrders } from "@/components/orders-provider"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
 import { reachGoal } from "@/lib/metrics/yandexMetrics"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import Image from "next/image"
 
 export interface Dish {
   id: string
@@ -56,6 +58,8 @@ export default function OrderPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">("cash")
   const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("")
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false)
 
   useEffect(() => {
     const now = new Date()
@@ -96,6 +100,15 @@ export default function OrderPage() {
     }, 1000 * 60) // проверка каждую минуту
 
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("maintenance-mode")
+      const enabled = stored === "true"
+      setIsMaintenanceMode(enabled)
+      setShowMaintenanceModal(enabled)
+    }
   }, [])
 
   const getDayName = (day: string) => {
@@ -234,7 +247,10 @@ export default function OrderPage() {
     const res = await ordersApi.createOrder(orderData, menu)
 
     if (res.success) {
-      toast({ title: t("common.success"), description: "Заказ успешно оформлен!" })
+      toast({
+        title: t("common.success"),
+        description: "Заказ успешно оформлен!",
+      })
     } else {
       toast({
         title: t("common.error"),
@@ -259,11 +275,40 @@ export default function OrderPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#87CEEB] via-[#B0E0E6] to-[#87CEEB]">
       <Header />
 
+      <Dialog
+        open={showMaintenanceModal}
+        onOpenChange={setShowMaintenanceModal}
+        aria-labelledby="maintenance-modal"
+      >
+        <DialogContent className="max-w-md bg-white shadow-lg rounded-lg">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <Image
+              src="warning-order.jpg"
+              alt="Сайт временно недоступен для заказов"
+              width={250}
+              height={250}
+            />
+            <div className="space-y-4 text-sm text-gray-800">
+              <p>
+                <strong>RU:</strong> Ведутся технические работы. Мы уже восстанавливаем сервис и
+                скоро вернемся. Извините за неудобства.
+              </p>
+              <p>
+                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті қалпына келтіріп
+                жатырмыз, жақында ораламыз. Қолайсыздықтар үшін кешірім сұраймыз.
+              </p>
+              <p>
+                <strong>EN:</strong> Under maintenance. We are currently fixing the service and will
+                be back shortly. We apologize for the inconvenience.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 text-[#003D82] mb-2">
-            {t("order.title")}
-          </h1>
+          <h1 className="text-4xl font-bold text-[#003D82] mb-2">{t("order.title")}</h1>
           {timeRestrictionMessage && (
             <Alert className="bg-red-50 border-red-200 flex">
               <Clock className="h-4 w-4 text-red-600" />
@@ -315,12 +360,18 @@ export default function OrderPage() {
                           />
                           <div>
                             <h3
-                              className={`font-semibold ${dayMenu.isAvailable ? "text-white" : "text-gray-400 pointer-events-none"}`}
+                              className={`font-semibold ${
+                                dayMenu.isAvailable
+                                  ? "text-white"
+                                  : "text-gray-400 pointer-events-none"
+                              }`}
                             >
                               {getDayName(dayMenu.day)}
                             </h3>
                             <p
-                              className={`text-sm text-gray-600 ${!dayMenu.isAvailable ? "text-gray-400" : "text-white"}`}
+                              className={`text-sm text-gray-600 ${
+                                !dayMenu.isAvailable ? "text-gray-400" : "text-white"
+                              }`}
                             >
                               {dayMenu.date}
                             </p>
@@ -336,7 +387,9 @@ export default function OrderPage() {
                               <select
                                 value={orderDay.deliveryTime}
                                 onChange={(e) =>
-                                  updateOrderDay(dayMenu.day, { deliveryTime: e.target.value })
+                                  updateOrderDay(dayMenu.day, {
+                                    deliveryTime: e.target.value,
+                                  })
                                 }
                                 className="bg-[#001F3F] w-full h-8 px-3 py-1 border border-[#00A8E8] rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-black appearance-none text-white placeholder:text-[#87CEEB]"
                               >
@@ -365,9 +418,13 @@ export default function OrderPage() {
                                 onBlur={(e) => {
                                   const val = Number.parseInt(e.target.value, 10)
                                   if (!Number.isInteger(val) || val < 1) {
-                                    updateOrderDay(dayMenu.day, { quantity: 1 })
+                                    updateOrderDay(dayMenu.day, {
+                                      quantity: 1,
+                                    })
                                   } else {
-                                    updateOrderDay(dayMenu.day, { quantity: val })
+                                    updateOrderDay(dayMenu.day, {
+                                      quantity: val,
+                                    })
                                   }
                                 }}
                                 onChange={(e) => {
@@ -375,7 +432,9 @@ export default function OrderPage() {
                                   if (value === "") return // не обновляем при пустом поле
                                   const parsed = Number.parseInt(value, 10)
                                   if (!Number.isNaN(parsed)) {
-                                    updateOrderDay(dayMenu.day, { quantity: parsed })
+                                    updateOrderDay(dayMenu.day, {
+                                      quantity: parsed,
+                                    })
                                   }
                                 }}
                                 className="bg-[#001F3F] w-20 h-8 px-3 py-1 border border-[#00A8E8] rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-black appearance-none text-white placeholder:text-[#87CEEB]"
@@ -452,7 +511,10 @@ export default function OrderPage() {
                       id="fullName"
                       value={customerInfo.fullName}
                       onChange={(e) => {
-                        setCustomerInfo({ ...customerInfo, fullName: e.target.value })
+                        setCustomerInfo({
+                          ...customerInfo,
+                          fullName: e.target.value,
+                        })
                         reachGoal("setCustomerInfo")
                       }}
                       placeholder="Иванов Иван Иванович"
@@ -497,7 +559,10 @@ export default function OrderPage() {
                         id="office"
                         value={customerInfo.office}
                         onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, office: e.target.value })
+                          setCustomerInfo({
+                            ...customerInfo,
+                            office: e.target.value,
+                          })
                         }
                         placeholder="101"
                         className="bg-[#001F3F] border-[#00A8E8] text-white placeholder:text-[#87CEEB]"
@@ -512,7 +577,10 @@ export default function OrderPage() {
                         id="floor"
                         value={customerInfo.floor}
                         onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, floor: e.target.value })
+                          setCustomerInfo({
+                            ...customerInfo,
+                            floor: e.target.value,
+                          })
                         }
                         placeholder="1"
                         className="bg-[#001F3F] border-[#00A8E8] text-white placeholder:text-[#87CEEB]"
@@ -528,7 +596,10 @@ export default function OrderPage() {
                       id="company"
                       value={customerInfo.company}
                       onChange={(e) =>
-                        setCustomerInfo({ ...customerInfo, company: e.target.value })
+                        setCustomerInfo({
+                          ...customerInfo,
+                          company: e.target.value,
+                        })
                       }
                       placeholder="ТОО Компания"
                       className="bg-[#001F3F] border-[#00A8E8] text-white placeholder:text-[#87CEEB]"
@@ -601,6 +672,7 @@ export default function OrderPage() {
                     <Button
                       className="w-full mt-4 bg-[#00A8E8] hover:bg-[#0099CC] text-[#003D82] font-bold h-10"
                       onClick={submitOrder}
+                      disabled={isMaintenanceMode}
                     >
                       {t("order.submit")}
                     </Button>
