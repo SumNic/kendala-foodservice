@@ -575,7 +575,7 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{t("admin.title")}</h1>
-            <div className="mt-2 flex items-center gap-2">
+            {/* <div className="mt-2 flex items-center gap-2">
               <Switch
                 checked={isMaintenanceMode}
                 onCheckedChange={handleToggleMaintenance}
@@ -584,7 +584,7 @@ export default function AdminPage() {
               <Label htmlFor="maintenance-mode" className="text-sm text-gray-700">
                 Сайт на техобслуживании (показать предупреждение и отключить заказ)
               </Label>
-            </div>
+            </div> */}
           </div>
           <Button variant="outline" onClick={() => handleLogout()}>
             {t("admin.logout")}

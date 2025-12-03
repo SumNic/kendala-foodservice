@@ -59,7 +59,7 @@ export default function OrderPage() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">("cash")
   const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("")
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
-  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false)
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(true)
 
   useEffect(() => {
     const now = new Date()
@@ -102,14 +102,14 @@ export default function OrderPage() {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("maintenance-mode")
-      const enabled = stored === "true"
-      setIsMaintenanceMode(enabled)
-      setShowMaintenanceModal(enabled)
-    }
-  }, [])
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     const stored = window.localStorage.getItem("maintenance-mode")
+  //     const enabled = stored === "true"
+  //     setIsMaintenanceMode(enabled)
+  //     setShowMaintenanceModal(enabled)
+  //   }
+  // }, [])
 
   const getDayName = (day: string) => {
     return t(`day.${day}`)
