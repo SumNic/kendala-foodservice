@@ -1,84 +1,89 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Header } from "@/components/header"
-import { useLanguage } from "@/components/language-provider"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
-import { Clock, ShoppingCart } from "lucide-react"
-import { ordersApi } from "@/lib/api"
-import cloneDeep from "lodash/cloneDeep"
-import { useOrders } from "@/components/orders-provider"
-import PhoneInput from "react-phone-input-2"
-import "react-phone-input-2/lib/style.css"
-import { reachGoal } from "@/lib/metrics/yandexMetrics"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import Image from "next/image"
+import { useState, useEffect, useCallback } from "react";
+import { Header } from "@/components/header";
+import { useLanguage } from "@/components/language-provider";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { Clock, ShoppingCart } from "lucide-react";
+import { ordersApi } from "@/lib/api";
+import cloneDeep from "lodash/cloneDeep";
+import { useOrders } from "@/components/orders-provider";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import { reachGoal } from "@/lib/metrics/yandexMetrics";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import Image from "next/image";
 
 export interface Dish {
-  id: string
-  name: string
-  description: string
-  calories: number
+  id: string;
+  name: string;
+  description: string;
+  calories: number;
 }
 
 export interface DayMenu {
-  day: string
-  date: string
-  dishes: Dish[]
-  isAvailable?: boolean
+  day: string;
+  date: string;
+  dishes: Dish[];
+  isAvailable?: boolean;
 }
 
 interface OrderDay {
-  day: string
-  date: string
-  selectedDishes: string[]
-  deliveryTime: string
-  quantity: number
+  day: string;
+  date: string;
+  selectedDishes: string[];
+  deliveryTime: string;
+  quantity: number;
 }
 
 export default function OrderPage() {
-  const { t } = useLanguage()
-  const { toast } = useToast()
-  const { menu, setMenu } = useOrders()
-  const [orderDays, setOrderDays] = useState<OrderDay[]>([])
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const { menu, setMenu } = useOrders();
+  const [orderDays, setOrderDays] = useState<OrderDay[]>([]);
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
     phone: "",
     office: "",
     floor: "",
     company: "",
-  })
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">("cash")
-  const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("")
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(true)
-  const [showMaintenanceModal, setShowMaintenanceModal] = useState(true)
+  });
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">(
+    "cash"
+  );
+  const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("");
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(true);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(true);
 
   useEffect(() => {
-    const now = new Date()
-    const hours = now.getHours()
-    const minutes = now.getMinutes()
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
 
-    if (minutes >= 0 && hours >= 17) setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-    if (minutes >= 0 && hours >= 11 && hours < 17) setTimeRestrictionMessage(t("order.orderClosed"))
+    if (minutes >= 0 && hours >= 17)
+      setTimeRestrictionMessage(t("order.orderClosesTomorrow"));
+    if (minutes >= 0 && hours >= 11 && hours < 17)
+      setTimeRestrictionMessage(t("order.orderClosed"));
 
     // Check if ordering is allowed based on current time
     const interval = setInterval(() => {
-      const now = new Date()
-      const currentDay = now.getDay()
-      const hours = now.getHours()
-      const minutes = now.getMinutes()
+      const now = new Date();
+      const currentDay = now.getDay();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
 
-      if (minutes >= 0 && hours >= 17) setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
+      if (minutes >= 0 && hours >= 17)
+        setTimeRestrictionMessage(t("order.orderClosesTomorrow"));
       if (minutes >= 0 && hours >= 11 && hours < 17)
-        setTimeRestrictionMessage(t("order.orderClosed"))
+        setTimeRestrictionMessage(t("order.orderClosed"));
 
       if (
         minutes >= 0 &&
@@ -87,20 +92,25 @@ export default function OrderPage() {
         menu.length &&
         menu[currentDay - 1]?.isAvailable !== false
       ) {
-        const newMenu = cloneDeep(menu)
-        newMenu[currentDay - 1].isAvailable = false
-        setMenu(newMenu)
+        const newMenu = cloneDeep(menu);
+        newMenu[currentDay - 1].isAvailable = false;
+        setMenu(newMenu);
       }
 
-      if (minutes >= 0 && hours >= 17 && menu.length && menu[currentDay]?.isAvailable !== false) {
-        const newMenu = cloneDeep(menu)
-        newMenu[currentDay].isAvailable = false
-        setMenu(newMenu)
+      if (
+        minutes >= 0 &&
+        hours >= 17 &&
+        menu.length &&
+        menu[currentDay]?.isAvailable !== false
+      ) {
+        const newMenu = cloneDeep(menu);
+        newMenu[currentDay].isAvailable = false;
+        setMenu(newMenu);
       }
-    }, 1000 * 60) // проверка каждую минуту
+    }, 1000 * 60); // проверка каждую минуту
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => clearInterval(interval);
+  }, []);
 
   // useEffect(() => {
   //   if (typeof window !== "undefined") {
@@ -112,14 +122,14 @@ export default function OrderPage() {
   // }, [])
 
   const getDayName = (day: string) => {
-    return t(`day.${day}`)
-  }
+    return t(`day.${day}`);
+  };
 
   const toggleDay = (dayMenu: DayMenu) => {
-    const existingIndex = orderDays.findIndex((od) => od.day === dayMenu.day)
+    const existingIndex = orderDays.findIndex((od) => od.day === dayMenu.day);
 
     if (existingIndex >= 0) {
-      setOrderDays(orderDays.filter((_, index) => index !== existingIndex))
+      setOrderDays(orderDays.filter((_, index) => index !== existingIndex));
     } else {
       setOrderDays([
         ...orderDays,
@@ -130,17 +140,17 @@ export default function OrderPage() {
           deliveryTime: "12:00",
           quantity: 1,
         },
-      ])
+      ]);
     }
-  }
+  };
 
   const handleChange = (value: string) => {
-    setCustomerInfo({ ...customerInfo, phone: value.replace(/\D/g, "") })
-  }
+    setCustomerInfo({ ...customerInfo, phone: value.replace(/\D/g, "") });
+  };
 
   const updateOrderDay = (day: string, updates: Partial<OrderDay>) => {
-    const hours = updates.deliveryTime?.slice(0, 2)
-    const minutes = updates.deliveryTime?.slice(3)
+    const hours = updates.deliveryTime?.slice(0, 2);
+    const minutes = updates.deliveryTime?.slice(3);
     if (
       (hours && +hours < 12) ||
       (hours && +hours >= 15 && minutes && +minutes > 30) ||
@@ -150,58 +160,60 @@ export default function OrderPage() {
         title: t("common.error"),
         description: "Доставка с 12:00 до 15:30",
         variant: "destructive",
-      })
+      });
     }
-    setOrderDays(orderDays.map((od) => (od.day === day ? { ...od, ...updates } : od)))
-  }
+    setOrderDays(
+      orderDays.map((od) => (od.day === day ? { ...od, ...updates } : od))
+    );
+  };
 
   const toggleDish = (day: string, dishId: string) => {
-    const orderDay = orderDays.find((od) => od.day === day)
-    if (!orderDay) return
+    const orderDay = orderDays.find((od) => od.day === day);
+    if (!orderDay) return;
 
-    const currentDishes = orderDay.selectedDishes
-    const isSelected = currentDishes.includes(dishId)
+    const currentDishes = orderDay.selectedDishes;
+    const isSelected = currentDishes.includes(dishId);
 
-    let newDishes: string[]
+    let newDishes: string[];
     if (isSelected) {
-      newDishes = currentDishes.filter((id) => id !== dishId)
+      newDishes = currentDishes.filter((id) => id !== dishId);
     } else {
       if (currentDishes.length >= 3) {
         toast({
           title: t("common.error"),
           description: "Максимум 3 блюда в день",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
-      newDishes = [...currentDishes, dishId]
+      newDishes = [...currentDishes, dishId];
     }
 
-    updateOrderDay(day, { selectedDishes: newDishes })
-  }
+    updateOrderDay(day, { selectedDishes: newDishes });
+  };
 
   const calculateTotal = () => {
-    let total = 0
+    let total = 0;
 
     orderDays.forEach((orderDay) => {
-      const dishCount = orderDay.selectedDishes.length
+      const dishCount = orderDay.selectedDishes.length;
       if (dishCount === 2) {
-        total += 2390 * orderDay.quantity
+        total += 2390 * orderDay.quantity;
       } else if (dishCount === 3) {
-        total += 2990 * orderDay.quantity
+        total += 2990 * orderDay.quantity;
       }
-      total += 300 * orderDay.quantity // Delivery fee
-    })
+      total += 300 * orderDay.quantity; // Delivery fee
+    });
 
-    return total
-  }
+    return total;
+  };
 
   const canSubmitOrder = () => {
     if (!customerInfo.fullName || !customerInfo.phone || !customerInfo.office) {
-      return false
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const canSubmitOrderTwoDishes = () => {
     return (
@@ -210,10 +222,10 @@ export default function OrderPage() {
           od.selectedDishes.length >= 2 &&
           od.selectedDishes.length <= 3 &&
           od.deliveryTime &&
-          od.quantity > 0,
+          od.quantity > 0
       ) && orderDays.length > 0
-    )
-  }
+    );
+  };
 
   const submitOrder = async () => {
     if (!canSubmitOrder()) {
@@ -221,16 +233,16 @@ export default function OrderPage() {
         title: t("common.error"),
         description: "Заполните все обязательные поля",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
     if (!canSubmitOrderTwoDishes()) {
       toast({
         title: t("common.error"),
         description: "Можно заказать не менее двух блюд в день",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
     // },
 
@@ -241,35 +253,35 @@ export default function OrderPage() {
       paymentMethod,
       total: calculateTotal(),
       timestamp: new Date().toISOString(),
-    }
+    };
 
-    reachGoal("createOrder")
-    const res = await ordersApi.createOrder(orderData, menu)
+    reachGoal("createOrder");
+    const res = await ordersApi.createOrder(orderData, menu);
 
     if (res.success) {
       toast({
         title: t("common.success"),
         description: "Заказ успешно оформлен!",
-      })
+      });
     } else {
       toast({
         title: t("common.error"),
         description: res.error || "Ошибка при оформлении заказа",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Reset form
-    setOrderDays([])
+    setOrderDays([]);
     setCustomerInfo({
       fullName: "",
       phone: "",
       office: "",
       floor: "",
       company: "",
-    })
-  }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#87CEEB] via-[#B0E0E6] to-[#87CEEB]">
@@ -279,8 +291,13 @@ export default function OrderPage() {
         open={showMaintenanceModal}
         onOpenChange={setShowMaintenanceModal}
         aria-labelledby="maintenance-modal"
+        modal
       >
-        <DialogContent className="max-w-md bg-white shadow-lg rounded-lg">
+        <DialogContent
+          showCloseButton={false}
+          closeOnOutsideClick={false}
+          className="max-w-md bg-white shadow-lg rounded-lg"
+        >
           <div className="flex flex-col items-center gap-4 text-center">
             <Image
               src="warning-order.jpg"
@@ -290,16 +307,18 @@ export default function OrderPage() {
             />
             <div className="space-y-4 text-sm text-gray-800">
               <p>
-                <strong>RU:</strong> Ведутся технические работы. Мы уже восстанавливаем сервис и
-                скоро вернемся. Извините за неудобства.
+                <strong>RU:</strong> Ведутся технические работы. Мы уже
+                восстанавливаем сервис и скоро вернемся. Извините за неудобства.
               </p>
               <p>
-                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті қалпына келтіріп
-                жатырмыз, жақында ораламыз. Қолайсыздықтар үшін кешірім сұраймыз.
+                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті
+                қалпына келтіріп жатырмыз, жақында ораламыз. Қолайсыздықтар үшін
+                кешірім сұраймыз.
               </p>
               <p>
-                <strong>EN:</strong> Under maintenance. We are currently fixing the service and will
-                be back shortly. We apologize for the inconvenience.
+                <strong>EN:</strong> Under maintenance. We are currently fixing
+                the service and will be back shortly. We apologize for the
+                inconvenience.
               </p>
             </div>
           </div>
@@ -308,11 +327,15 @@ export default function OrderPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-[#003D82] mb-2">{t("order.title")}</h1>
+          <h1 className="text-4xl font-bold text-[#003D82] mb-2">
+            {t("order.title")}
+          </h1>
           {timeRestrictionMessage && (
             <Alert className="bg-red-50 border-red-200 flex">
               <Clock className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">{timeRestrictionMessage}</AlertDescription>
+              <AlertDescription className="text-red-800">
+                {timeRestrictionMessage}
+              </AlertDescription>
             </Alert>
           )}
         </div>
@@ -326,17 +349,25 @@ export default function OrderPage() {
                   {t("order.selectDishes")}
                 </CardTitle>
                 <div className="text-white text-sm mb-6 pb-4 border-b border-[#00A8E8]">
-                  <span className="font-semibold">{t("order.price2dishes")}</span>
+                  <span className="font-semibold">
+                    {t("order.price2dishes")}
+                  </span>
                   <span className="mx-4">•</span>
-                  <span className="font-semibold">{t("order.price3dishes")}</span>
+                  <span className="font-semibold">
+                    {t("order.price3dishes")}
+                  </span>
                   <span className="mx-4">•</span>
-                  <span className="font-semibold">{t("order.deliveryFee")}</span>
+                  <span className="font-semibold">
+                    {t("order.deliveryFee")}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 {menu?.map((dayMenu) => {
-                  const orderDay = orderDays.find((od) => od.day === dayMenu.day)
-                  const isSelected = !!orderDay
+                  const orderDay = orderDays.find(
+                    (od) => od.day === dayMenu.day
+                  );
+                  const isSelected = !!orderDay;
 
                   return (
                     <div
@@ -352,8 +383,8 @@ export default function OrderPage() {
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => {
-                              dayMenu.isAvailable && toggleDay(dayMenu)
-                              reachGoal("checkedDay")
+                              dayMenu.isAvailable && toggleDay(dayMenu);
+                              reachGoal("checkedDay");
                             }}
                             disabled={!dayMenu.isAvailable}
                             className="border-[#00A8E8]"
@@ -370,7 +401,9 @@ export default function OrderPage() {
                             </h3>
                             <p
                               className={`text-sm text-gray-600 ${
-                                !dayMenu.isAvailable ? "text-gray-400" : "text-white"
+                                !dayMenu.isAvailable
+                                  ? "text-gray-400"
+                                  : "text-white"
                               }`}
                             >
                               {dayMenu.date}
@@ -413,28 +446,31 @@ export default function OrderPage() {
                                 step="1"
                                 value={orderDay.quantity}
                                 onFocus={(e) => {
-                                  e.target.value = ""
+                                  e.target.value = "";
                                 }}
                                 onBlur={(e) => {
-                                  const val = Number.parseInt(e.target.value, 10)
+                                  const val = Number.parseInt(
+                                    e.target.value,
+                                    10
+                                  );
                                   if (!Number.isInteger(val) || val < 1) {
                                     updateOrderDay(dayMenu.day, {
                                       quantity: 1,
-                                    })
+                                    });
                                   } else {
                                     updateOrderDay(dayMenu.day, {
                                       quantity: val,
-                                    })
+                                    });
                                   }
                                 }}
                                 onChange={(e) => {
-                                  const value = e.target.value
-                                  if (value === "") return // не обновляем при пустом поле
-                                  const parsed = Number.parseInt(value, 10)
+                                  const value = e.target.value;
+                                  if (value === "") return; // не обновляем при пустом поле
+                                  const parsed = Number.parseInt(value, 10);
                                   if (!Number.isNaN(parsed)) {
                                     updateOrderDay(dayMenu.day, {
                                       quantity: parsed,
-                                    })
+                                    });
                                   }
                                 }}
                                 className="bg-[#001F3F] w-20 h-8 px-3 py-1 border border-[#00A8E8] rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-black appearance-none text-white placeholder:text-[#87CEEB]"
@@ -455,13 +491,15 @@ export default function OrderPage() {
                                   : "border-[#00A8E8]/30 md:hover:border-[#00A8E8] md:transition"
                               }`}
                               onClick={() => {
-                                toggleDish(dayMenu.day, dish.id)
-                                reachGoal("selectDish")
+                                toggleDish(dayMenu.day, dish.id);
+                                reachGoal("selectDish");
                               }}
                             >
                               <div className="flex flex-col sm:flex-row justify-between items-start">
                                 <div className="flex-1">
-                                  <h4 className="font-medium text-white">{dish.name}</h4>
+                                  <h4 className="font-medium text-white">
+                                    {dish.name}
+                                  </h4>
                                   <p className="text-sm text-[#87CEEB] mt-1 w-full">
                                     {dish.description}
                                   </p>
@@ -487,7 +525,7 @@ export default function OrderPage() {
                           </Alert>
                         )}
                     </div>
-                  )
+                  );
                 })}
               </CardContent>
             </Card>
@@ -514,8 +552,8 @@ export default function OrderPage() {
                         setCustomerInfo({
                           ...customerInfo,
                           fullName: e.target.value,
-                        })
-                        reachGoal("setCustomerInfo")
+                        });
+                        reachGoal("setCustomerInfo");
                       }}
                       placeholder="Иванов Иван Иванович"
                       className="bg-[#001F3F] border-[#00A8E8] text-white placeholder:text-[#87CEEB]"
@@ -617,16 +655,26 @@ export default function OrderPage() {
                 <CardContent>
                   <RadioGroup
                     value={paymentMethod}
-                    onValueChange={(value: "cash" | "invoice") => setPaymentMethod(value)}
+                    onValueChange={(value: "cash" | "invoice") =>
+                      setPaymentMethod(value)
+                    }
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="cash" id="cash" className="border-[#00A8E8]" />
+                      <RadioGroupItem
+                        value="cash"
+                        id="cash"
+                        className="border-[#00A8E8]"
+                      />
                       <Label htmlFor="cash" className="text-white text-sm">
                         {t("order.cashCard")}
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="invoice" id="invoice" className="border-[#00A8E8]" />
+                      <RadioGroupItem
+                        value="invoice"
+                        id="invoice"
+                        className="border-[#00A8E8]"
+                      />
                       <Label htmlFor="invoice" className="text-white text-sm">
                         {t("order.invoice")}
                       </Label>
@@ -646,26 +694,37 @@ export default function OrderPage() {
                   <CardContent>
                     <div className="space-y-2 text-sm">
                       {orderDays.map((orderDay) => {
-                        const dayMenu = menu.find((m) => m.day === orderDay.day)
-                        const dishCount = orderDay.selectedDishes.length
-                        const mealPrice = dishCount === 2 ? 2390 : dishCount === 3 ? 2990 : 0
-                        const deliveryPrice = 300
+                        const dayMenu = menu.find(
+                          (m) => m.day === orderDay.day
+                        );
+                        const dishCount = orderDay.selectedDishes.length;
+                        const mealPrice =
+                          dishCount === 2 ? 2390 : dishCount === 3 ? 2990 : 0;
+                        const deliveryPrice = 300;
 
                         return (
-                          <div key={orderDay.day} className="flex justify-between">
+                          <div
+                            key={orderDay.day}
+                            className="flex justify-between"
+                          >
                             <span className="text-white text-sm">
-                              {getDayName(orderDay.day)} ({dishCount} {t("order.dishes")} ×{" "}
-                              {orderDay.quantity})
+                              {getDayName(orderDay.day)} ({dishCount}{" "}
+                              {t("order.dishes")} × {orderDay.quantity})
                             </span>
                             <span className="text-white text-sm">
-                              {(mealPrice + deliveryPrice) * orderDay.quantity} ₸
+                              {(mealPrice + deliveryPrice) * orderDay.quantity}{" "}
+                              ₸
                             </span>
                           </div>
-                        )
+                        );
                       })}
                       <div className="border-t pt-2 font-semibold flex justify-between">
-                        <span className="text-white text-sm">{t("order.total")}:</span>
-                        <span className="text-white text-sm">{calculateTotal()} ₸</span>
+                        <span className="text-white text-sm">
+                          {t("order.total")}:
+                        </span>
+                        <span className="text-white text-sm">
+                          {calculateTotal()} ₸
+                        </span>
                       </div>
                     </div>
 
@@ -695,5 +754,5 @@ export default function OrderPage() {
         </svg>
       </div>
     </div>
-  )
+  );
 }
