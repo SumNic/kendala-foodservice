@@ -280,7 +280,11 @@ export default function OrderPage() {
         onOpenChange={setShowMaintenanceModal}
         aria-labelledby="maintenance-modal"
       >
-        <DialogContent className="max-w-md bg-white shadow-lg rounded-lg">
+        <DialogContent
+          showCloseButton={false}
+          closeOnOutsideClick={false}
+          className="max-w-md bg-white shadow-lg rounded-lg"
+        >
           <div className="flex flex-col items-center gap-4 text-center">
             <Image
               src="warning-order.jpg"
@@ -290,16 +294,18 @@ export default function OrderPage() {
             />
             <div className="space-y-4 text-sm text-gray-800">
               <p>
-                <strong>RU:</strong> Ведутся технические работы. Мы уже восстанавливаем сервис и
-                скоро вернемся. Извините за неудобства.
+                <strong>RU:</strong> Ведутся технические работы. Мы уже
+                восстанавливаем сервис и скоро вернемся. Извините за неудобства.
               </p>
               <p>
-                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті қалпына келтіріп
-                жатырмыз, жақында ораламыз. Қолайсыздықтар үшін кешірім сұраймыз.
+                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті
+                қалпына келтіріп жатырмыз, жақында ораламыз. Қолайсыздықтар үшін
+                кешірім сұраймыз.
               </p>
               <p>
-                <strong>EN:</strong> Under maintenance. We are currently fixing the service and will
-                be back shortly. We apologize for the inconvenience.
+                <strong>EN:</strong> Under maintenance. We are currently fixing
+                the service and will be back shortly. We apologize for the
+                inconvenience.
               </p>
             </div>
           </div>
