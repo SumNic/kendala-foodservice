@@ -4,9 +4,9 @@ declare global {
       id: number,
       event: "init" | "reachGoal" | "hit",
       goalName?: string,
-      params?: Record<string, any>
-    ) => void;
+      params?: Record<string, any>,
+    ) => void
   }
 }
 
-export {};
+export {}

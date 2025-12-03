@@ -19,7 +19,7 @@ export function Contacts({ styles }: Props) {
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-2 hover:text-blue-400 transition-colors"
-        onClick={() => reachGoal('clickWhatsApp')}
+        onClick={() => reachGoal("clickWhatsApp")}
       >
         <MessageCircle className="w-5 h-5" />
         <span>{t("about.whatsapp")}</span>
@@ -29,7 +29,7 @@ export function Contacts({ styles }: Props) {
       <a
         href={`tel:${PHONE_NUMBER}`}
         className="flex items-center gap-2 hover:text-blue-400 transition-colors"
-        onClick={() => reachGoal('clickTelNumber')}
+        onClick={() => reachGoal("clickTelNumber")}
       >
         <Phone className="w-5 h-5" />
         <span>{t("about.phone")}</span>

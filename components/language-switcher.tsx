@@ -8,10 +8,18 @@ export function LanguageSwitcher() {
 
   return (
     <div className="flex gap-2">
-      <Button variant={language === "ru" ? "default" : "outline"} size="sm" onClick={() => setLanguage("ru")}>
+      <Button
+        variant={language === "ru" ? "default" : "outline"}
+        size="sm"
+        onClick={() => setLanguage("ru")}
+      >
         РУС
       </Button>
-      <Button variant={language === "kk" ? "default" : "outline"} size="sm" onClick={() => setLanguage("kk")}>
+      <Button
+        variant={language === "kk" ? "default" : "outline"}
+        size="sm"
+        onClick={() => setLanguage("kk")}
+      >
         ҚАЗ
       </Button>
     </div>

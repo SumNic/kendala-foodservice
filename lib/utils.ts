@@ -79,7 +79,7 @@ export const priceUtils = {
 // Validation utilities
 export const validationUtils = {
   validatePhone(phone: string): boolean {
-    const phoneRegex = /^\+7\s?\d{3}\s?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/;
+    const phoneRegex = /^\+7\s?\d{3}\s?\d{3}[-\s]?\d{2}[-\s]?\d{2}$/
 
     return phoneRegex.test(phone)
   },
@@ -214,38 +214,36 @@ export const printUtils = {
 }
 
 export function createOrderEmailHtml(id: number, order: Order, menu: DayMenu[]) {
-  const dishes = menu.map(menuDay => menuDay.dishes).flat();
-  
-  const isRushOrder = isUrgent(order);
-  const isRushOrderString = isRushOrder 
-    ? '<p style="margin:0 0 0.2em 0"><b>[СРОЧНО]</b></p>' 
-    : '';
+  const dishes = menu.map((menuDay) => menuDay.dishes).flat()
 
-  let orderDaysString = '';
-  let lastOrderDate: string | null = null;
-  let orderQuantityTotal = 0;
+  const isRushOrder = isUrgent(order)
+  const isRushOrderString = isRushOrder ? '<p style="margin:0 0 0.2em 0"><b>[СРОЧНО]</b></p>' : ""
+
+  let orderDaysString = ""
+  let lastOrderDate: string | null = null
+  let orderQuantityTotal = 0
 
   for (const day of order.orderDays) {
     if (day.date !== lastOrderDate) {
-      if (lastOrderDate !== null) orderDaysString += '</tbody>';
-      orderDaysString += '<tbody style="border-top:4px double">';
-      lastOrderDate = day.date;
+      if (lastOrderDate !== null) orderDaysString += "</tbody>"
+      orderDaysString += '<tbody style="border-top:4px double">'
+      lastOrderDate = day.date
     }
 
     orderDaysString += `
       <tr>
         <td style="padding:0.2em 0.4em;border:1px solid;text-align:center">${day.date}</td>
-        <td style="padding:0.2em 0.4em;border:1px solid">${day.selectedDishes.map(dishId => dishes.find(dish => dish.id === dishId)?.name || '—')}</td>
+        <td style="padding:0.2em 0.4em;border:1px solid">${day.selectedDishes.map((dishId) => dishes.find((dish) => dish.id === dishId)?.name || "—")}</td>
         <td style="padding:0.2em 0.4em;border:1px solid;text-align:right">${day.quantity}</td>
         <td style="padding:0.2em 0.4em;border:1px solid;text-align:right">${day.selectedDishes.length === 2 ? 2690 : 3290} тг</td>
       </tr>
-    `;
+    `
 
-    orderQuantityTotal += day.quantity;
+    orderQuantityTotal += day.quantity
   }
 
   if (order.orderDays.length > 0) {
-    orderDaysString += '</tbody>';
+    orderDaysString += "</tbody>"
   }
 
   return `<!DOCTYPE html>
@@ -255,7 +253,7 @@ export function createOrderEmailHtml(id: number, order: Order, menu: DayMenu[]) 
     <h1 style="font-size:1.6em;font-weight:bolder;margin:0 0 1em 0">Новый заказ</h1>
     <div style="margin:0 0 1em 0">
       <p><b>Номер заказа</b> ${id}</p>
-      <p><b>Дата оформления:</b> ${order.timestamp.split('T')[0]}</p>
+      <p><b>Дата оформления:</b> ${order.timestamp.split("T")[0]}</p>
       ${isRushOrderString}
     </div>
     <div style="margin:0 0 1em 0">
@@ -290,11 +288,10 @@ export function createOrderEmailHtml(id: number, order: Order, menu: DayMenu[]) 
       </ul>
     </div>
   </body>
-  </html>`;
+  </html>`
 }
 
 function isUrgent(order: Order): boolean {
-   const today = new Date().toDateString()
-   return order.orderDays.some((day: any) => new Date(day.date).toDateString() === today)
+  const today = new Date().toDateString()
+  return order.orderDays.some((day: any) => new Date(day.date).toDateString() === today)
 }
-
