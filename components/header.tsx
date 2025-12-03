@@ -31,25 +31,39 @@ export function Header() {
           </Link>
 
           <nav className="md:flex items-center gap-4">
-            <Link href="/" className="text-[#003D82] font-semibold hover:text-[#001F3F] transition">
-            </Link>
-            <Link href="/about" className="text-[#003D82] font-semibold hover:text-[#001F3F] transition">
+            <Link
+              href="/"
+              className="text-[#003D82] font-semibold hover:text-[#001F3F] transition"
+            ></Link>
+            <Link
+              href="/about"
+              className="text-[#003D82] font-semibold hover:text-[#001F3F] transition"
+            >
               <p>{t("nav.about")}</p>
             </Link>
-            <Link href="/admin" className="text-[#003D82] font-semibold hover:text-[#001F3F] transition">
+            <Link
+              href="/admin"
+              className="text-[#003D82] font-semibold hover:text-[#001F3F] transition"
+            >
               {token && hash && <p>{t("nav.admin")}</p>}
             </Link>
-            <Link href="/kitchen" className="text-[#003D82] font-semibold hover:text-[#001F3F] transition">
+            <Link
+              href="/kitchen"
+              className="text-[#003D82] font-semibold hover:text-[#001F3F] transition"
+            >
               {token && hash && <p>{t("nav.kitchen")}</p>}
             </Link>
-            <Link href="/delivery" className="text-[#003D82] font-semibold hover:text-[#001F3F] transition">
+            <Link
+              href="/delivery"
+              className="text-[#003D82] font-semibold hover:text-[#001F3F] transition"
+            >
               {token && hash && <p>{t("nav.delivery")}</p>}
             </Link>
           </nav>
 
           <div className="flex gap-4 items-center">
             <div className="hidden  lg:flex">
-              <Contacts styles="text-[#003D82]"/>
+              <Contacts styles="text-[#003D82]" />
             </div>
 
             <button
