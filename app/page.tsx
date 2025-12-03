@@ -58,7 +58,7 @@ export default function OrderPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">("cash")
   const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("")
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(true)
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(true)
 
   useEffect(() => {
