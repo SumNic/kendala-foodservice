@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 
 import { DayMenu } from "@/app/page"
 
-import { menuApi, Order, ordersApi } from "@/lib/api"
+import { commonApi, menuApi, Order, ordersApi } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/components/language-provider"
 
@@ -26,6 +26,8 @@ interface OrdersContextType {
   getOrders: () => Promise<void>
   getMenu: (currentWeekDays: WeekDay[]) => Promise<void>
   getCurrentWeekDays: () => WeekDay[]
+  isMaintenanceMode: boolean
+  setIsMaintenanceMode: (status: boolean) => void
 }
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined)
@@ -38,6 +40,7 @@ export const OrdersProvider: React.FC<{
   const { t } = useLanguage()
   const { toast } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
   const [menu, setMenu] = useState<DayMenu[]>([])
   const [token, setToken] = useState<string | undefined>(initialToken)
   const [hash, setHash] = useState<string | undefined>(initialHash)
@@ -161,6 +164,21 @@ export const OrdersProvider: React.FC<{
     }
   }
 
+  const getSiteStatus = async () => {
+    try {
+      const res = await commonApi.getSiteStatus()
+
+      if (res.success) {
+        setIsMaintenanceMode(!!res.data)
+      } else {
+        setIsMaintenanceMode(false)
+      }
+    } catch (error) {
+      setIsMaintenanceMode(false)
+      console.error(error)
+    }
+  }
+
   useEffect(() => {
     if (token && hash) {
       getOrders()
@@ -169,6 +187,7 @@ export const OrdersProvider: React.FC<{
   }, [token, hash])
 
   useEffect(() => {
+    getSiteStatus()
     const currentWeekDays = getCurrentWeekDays()
     if (currentWeekDays?.length) getMenu(currentWeekDays)
   }, [])
@@ -191,6 +210,8 @@ export const OrdersProvider: React.FC<{
         getOrders,
         getMenu,
         getCurrentWeekDays,
+        isMaintenanceMode,
+        setIsMaintenanceMode,
       }}
     >
       {children}
