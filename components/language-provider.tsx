@@ -1,5 +1,11 @@
 "use client"
 
+import {
+  ORDER_END_HOUR,
+  ORDER_END_MINUTS,
+  ORDER_START_HOUR,
+  ORDER_START_MINUTS,
+} from "@/lib/constants"
 import type React from "react"
 import { createContext, useContext, useState } from "react"
 
@@ -10,6 +16,9 @@ interface LanguageContextType {
   setLanguage: (lang: Language) => void
   t: (key: string) => string
 }
+
+const orderStartTime = `${ORDER_START_HOUR}:${ORDER_START_MINUTS.toString().padStart(2, "0")}`
+const orderEndTime = `${ORDER_END_HOUR}:${ORDER_END_MINUTS.toString().padStart(2, "0")}`
 
 const translations = {
   ru: {
@@ -43,8 +52,8 @@ const translations = {
     "order.invoice": "Запросить счет",
     "order.total": "Итого",
     "order.submit": "Оформить заказ",
-    "order.orderClosed": "Заказы на сегодня закрыты (до 11:00)",
-    "order.orderClosesTomorrow": "Заказы на завтра закрываются в 17:00",
+    "order.orderClosed": `Заказы на сегодня закрыты (до ${orderStartTime})`,
+    "order.orderClosesTomorrow": `Заказы на завтра закрываются в ${orderEndTime}`,
 
     // Days
     "day.monday": "Понедельник",
@@ -163,8 +172,8 @@ const translations = {
     "order.invoice": "Шот сұрау",
     "order.total": "Барлығы",
     "order.submit": "Тапсырыс беру",
-    "order.orderClosed": "Бүгінгі тапсырыстар жабылды (11:00-ге дейін)",
-    "order.orderClosesTomorrow": "Ертеңгі тапсырыстар 17:00-де жабылады",
+    "order.orderClosed": `Бүгінгі тапсырыстар жабылды (${orderStartTime}-ге дейін)`,
+    "order.orderClosesTomorrow": `Ертеңгі тапсырыстар ${orderEndTime}-де жабылады`,
 
     // Days
     "day.monday": "Дүйсенбі",

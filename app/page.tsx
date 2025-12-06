@@ -21,6 +21,12 @@ import "react-phone-input-2/lib/style.css"
 import { reachGoal } from "@/lib/metrics/yandexMetrics"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import Image from "next/image"
+import {
+  ORDER_END_HOUR,
+  ORDER_END_MINUTS,
+  ORDER_START_HOUR,
+  ORDER_START_MINUTS,
+} from "@/lib/constants"
 
 export interface Dish {
   id: string
@@ -64,8 +70,10 @@ export default function OrderPage() {
     const hours = now.getHours()
     const minutes = now.getMinutes()
 
-    if (minutes >= 0 && hours >= 17) setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-    if (minutes >= 0 && hours >= 11 && hours < 17) setTimeRestrictionMessage(t("order.orderClosed"))
+    if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR)
+      setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
+    if (minutes >= ORDER_START_MINUTS && hours >= ORDER_START_HOUR && hours < ORDER_END_HOUR)
+      setTimeRestrictionMessage(t("order.orderClosed"))
 
     // Check if ordering is allowed based on current time
     const interval = setInterval(() => {
@@ -74,14 +82,15 @@ export default function OrderPage() {
       const hours = now.getHours()
       const minutes = now.getMinutes()
 
-      if (minutes >= 0 && hours >= 17) setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-      if (minutes >= 0 && hours >= 11 && hours < 17)
+      if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR)
+        setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
+      if (minutes >= ORDER_START_MINUTS && hours >= ORDER_START_HOUR && hours < ORDER_END_HOUR)
         setTimeRestrictionMessage(t("order.orderClosed"))
 
       if (
-        minutes >= 0 &&
-        hours >= 11 &&
-        hours < 17 &&
+        minutes >= ORDER_START_MINUTS &&
+        hours >= ORDER_START_HOUR &&
+        hours < ORDER_END_HOUR &&
         menu.length &&
         menu[currentDay - 1]?.isAvailable !== false
       ) {
@@ -90,7 +99,12 @@ export default function OrderPage() {
         setMenu(newMenu)
       }
 
-      if (minutes >= 0 && hours >= 17 && menu.length && menu[currentDay]?.isAvailable !== false) {
+      if (
+        minutes >= ORDER_END_MINUTS &&
+        hours >= ORDER_END_HOUR &&
+        menu.length &&
+        menu[currentDay]?.isAvailable !== false
+      ) {
         const newMenu = cloneDeep(menu)
         newMenu[currentDay].isAvailable = false
         setMenu(newMenu)

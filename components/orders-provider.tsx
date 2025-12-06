@@ -8,6 +8,12 @@ import { DayMenu } from "@/app/page"
 import { commonApi, menuApi, Order, ordersApi } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/components/language-provider"
+import {
+  ORDER_END_HOUR,
+  ORDER_END_MINUTS,
+  ORDER_START_HOUR,
+  ORDER_START_MINUTS,
+} from "@/lib/constants"
 
 type WeekDay = {
   day: string
@@ -80,13 +86,17 @@ export const OrdersProvider: React.FC<{
     const minutes = now.getMinutes()
 
     const blockDaysMenu = menu.map((item, numberDay) => {
-      if (minutes >= 0 && hours >= 17 && numberDay <= currentDay) {
+      if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR && numberDay <= currentDay) {
         return {
           ...item,
           isAvailable: false,
         }
       }
-      if (minutes >= 0 && hours >= 11 && numberDay + 1 <= currentDay) {
+      if (
+        minutes >= ORDER_START_MINUTS &&
+        hours >= ORDER_START_HOUR &&
+        numberDay + 1 <= currentDay
+      ) {
         return {
           ...item,
           isAvailable: false,
