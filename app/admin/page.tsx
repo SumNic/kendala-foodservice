@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Upload, Download, Search } from "lucide-react"
-import { authApi, menuApi, ordersApi } from "@/lib/api"
+import { authApi, commonApi, menuApi, ordersApi } from "@/lib/api"
 import * as XLSX from "xlsx"
 import { useOrders } from "@/components/orders-provider"
 import {
@@ -42,7 +42,16 @@ interface BaseStyles {
 
 export default function AdminPage() {
   const { t } = useLanguage()
-  const { orders, token, setToken, hash, setHash, getOrders } = useOrders()
+  const {
+    orders,
+    token,
+    setToken,
+    hash,
+    setHash,
+    getOrders,
+    isMaintenanceMode,
+    setIsMaintenanceMode,
+  } = useOrders()
   const { toast } = useToast()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginData, setLoginData] = useState({ login: "", password: "" })
@@ -70,7 +79,6 @@ export default function AdminPage() {
     to: new Date(),
   })
   const [isLoadingExport, setIsLoadingExport] = useState(false)
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
 
   const normalizePhone = (val: string) => val.replace(/[^\d]/g, "") // только цифры
 
@@ -109,17 +117,39 @@ export default function AdminPage() {
     }
   }, [token, hash])
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem("maintenance-mode")
-      setIsMaintenanceMode(stored === "true")
+  const handleToggleMaintenance = async (switchValue: boolean) => {
+    const siteOnline = {
+      site_constants: [{ id: "site_online", value: switchValue ? 1 : 0 }],
     }
-  }, [])
 
-  const handleToggleMaintenance = (value: boolean) => {
-    setIsMaintenanceMode(value)
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("maintenance-mode", value ? "true" : "false")
+    try {
+      const res = await commonApi.setSiteStatus({
+        data: JSON.stringify(siteOnline),
+        token: token,
+        u_hash: hash,
+      })
+
+      if (res.success) {
+        setIsMaintenanceMode(switchValue)
+
+        toast({
+          title: t("common.success"),
+          description: `Технические работы ${switchValue ? "начаты" : "завершены"}`,
+        })
+      } else {
+        toast({
+          title: t("common.error"),
+          description: res.error || "Не удалось изменить состояние сайта",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: t("common.error"),
+        description: "Ошибка при изменении состояния сайта",
+        variant: "destructive",
+      })
     }
   }
 
@@ -575,7 +605,7 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{t("admin.title")}</h1>
-            {/* <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <Switch
                 checked={isMaintenanceMode}
                 onCheckedChange={handleToggleMaintenance}
@@ -584,7 +614,7 @@ export default function AdminPage() {
               <Label htmlFor="maintenance-mode" className="text-sm text-gray-700">
                 Сайт на техобслуживании (показать предупреждение и отключить заказ)
               </Label>
-            </div> */}
+            </div>
           </div>
           <Button variant="outline" onClick={() => handleLogout()}>
             {t("admin.logout")}
@@ -745,11 +775,7 @@ export default function AdminPage() {
                                                                  false,
                                                                )
                                                          }
-                                                         ${
-                                                           value !== "delivered"
-                                                             ? "border-b border-gray-100"
-                                                             : ""
-                                                         }
+                                                         ${value !== "delivered" ? "border-b border-gray-100" : ""}
                                                       `}
                                     style={{
                                       borderBottom:

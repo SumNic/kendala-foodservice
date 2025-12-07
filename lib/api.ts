@@ -232,3 +232,21 @@ export const kitchenApi = {
     }
   },
 }
+
+// Orders API
+export const commonApi = {
+  async setSiteStatus(data: MenuUpload): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/common/status`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+    return response.json()
+  },
+
+  async getSiteStatus(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/common/status`, {
+      method: "GET",
+    })
+    return response.json()
+  },
+}

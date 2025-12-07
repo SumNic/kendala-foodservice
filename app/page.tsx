@@ -21,6 +21,12 @@ import "react-phone-input-2/lib/style.css"
 import { reachGoal } from "@/lib/metrics/yandexMetrics"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import Image from "next/image"
+import {
+  ORDER_END_HOUR,
+  ORDER_END_MINUTS,
+  ORDER_START_HOUR,
+  ORDER_START_MINUTS,
+} from "@/lib/constants"
 
 export interface Dish {
   id: string
@@ -47,7 +53,7 @@ interface OrderDay {
 export default function OrderPage() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { menu, setMenu } = useOrders()
+  const { menu, setMenu, isMaintenanceMode } = useOrders()
   const [orderDays, setOrderDays] = useState<OrderDay[]>([])
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
@@ -58,16 +64,16 @@ export default function OrderPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">("cash")
   const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("")
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(true)
-  const [showMaintenanceModal, setShowMaintenanceModal] = useState(true)
 
   useEffect(() => {
     const now = new Date()
     const hours = now.getHours()
     const minutes = now.getMinutes()
 
-    if (minutes >= 0 && hours >= 17) setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-    if (minutes >= 0 && hours >= 11 && hours < 17) setTimeRestrictionMessage(t("order.orderClosed"))
+    if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR)
+      setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
+    if (minutes >= ORDER_START_MINUTS && hours >= ORDER_START_HOUR && hours < ORDER_END_HOUR)
+      setTimeRestrictionMessage(t("order.orderClosed"))
 
     // Check if ordering is allowed based on current time
     const interval = setInterval(() => {
@@ -76,14 +82,15 @@ export default function OrderPage() {
       const hours = now.getHours()
       const minutes = now.getMinutes()
 
-      if (minutes >= 0 && hours >= 17) setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-      if (minutes >= 0 && hours >= 11 && hours < 17)
+      if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR)
+        setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
+      if (minutes >= ORDER_START_MINUTS && hours >= ORDER_START_HOUR && hours < ORDER_END_HOUR)
         setTimeRestrictionMessage(t("order.orderClosed"))
 
       if (
-        minutes >= 0 &&
-        hours >= 11 &&
-        hours < 17 &&
+        minutes >= ORDER_START_MINUTS &&
+        hours >= ORDER_START_HOUR &&
+        hours < ORDER_END_HOUR &&
         menu.length &&
         menu[currentDay - 1]?.isAvailable !== false
       ) {
@@ -92,7 +99,12 @@ export default function OrderPage() {
         setMenu(newMenu)
       }
 
-      if (minutes >= 0 && hours >= 17 && menu.length && menu[currentDay]?.isAvailable !== false) {
+      if (
+        minutes >= ORDER_END_MINUTS &&
+        hours >= ORDER_END_HOUR &&
+        menu.length &&
+        menu[currentDay]?.isAvailable !== false
+      ) {
         const newMenu = cloneDeep(menu)
         newMenu[currentDay].isAvailable = false
         setMenu(newMenu)
@@ -101,15 +113,6 @@ export default function OrderPage() {
 
     return () => clearInterval(interval)
   }, [])
-
-  // useEffect(() => {
-  //   if (typeof window !== "undefined") {
-  //     const stored = window.localStorage.getItem("maintenance-mode")
-  //     const enabled = stored === "true"
-  //     setIsMaintenanceMode(enabled)
-  //     setShowMaintenanceModal(enabled)
-  //   }
-  // }, [])
 
   const getDayName = (day: string) => {
     return t(`day.${day}`)
@@ -275,11 +278,7 @@ export default function OrderPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#87CEEB] via-[#B0E0E6] to-[#87CEEB]">
       <Header />
 
-      <Dialog
-        open={showMaintenanceModal}
-        onOpenChange={setShowMaintenanceModal}
-        aria-labelledby="maintenance-modal"
-      >
+      <Dialog open={isMaintenanceMode} aria-labelledby="maintenance-modal">
         <DialogContent
           showCloseButton={false}
           closeOnOutsideClick={false}
@@ -294,18 +293,16 @@ export default function OrderPage() {
             />
             <div className="space-y-4 text-sm text-gray-800">
               <p>
-                <strong>RU:</strong> Ведутся технические работы. Мы уже
-                восстанавливаем сервис и скоро вернемся. Извините за неудобства.
+                <strong>RU:</strong> Ведутся технические работы. Мы уже восстанавливаем сервис и
+                скоро вернемся. Извините за неудобства.
               </p>
               <p>
-                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті
-                қалпына келтіріп жатырмыз, жақында ораламыз. Қолайсыздықтар үшін
-                кешірім сұраймыз.
+                <strong>KZ:</strong> Техникалық жұмыстар жүргізілуде. Қызметті қалпына келтіріп
+                жатырмыз, жақында ораламыз. Қолайсыздықтар үшін кешірім сұраймыз.
               </p>
               <p>
-                <strong>EN:</strong> Under maintenance. We are currently fixing
-                the service and will be back shortly. We apologize for the
-                inconvenience.
+                <strong>EN:</strong> Under maintenance. We are currently fixing the service and will
+                be back shortly. We apologize for the inconvenience.
               </p>
             </div>
           </div>
