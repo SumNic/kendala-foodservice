@@ -2,6 +2,7 @@ import { DayMenu } from "@/app/page"
 import { Order } from "@/lib/api"
 import { createOrderEmailHtml } from "@/lib/utils"
 import { type NextRequest, NextResponse } from "next/server"
+import sendOrderNotification from "./notify"
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,8 +60,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Send email notification
-    await sendOrderEmail(responseData.data.b_id, orderData, menu)
+    // Send notification
+    await sendOrderNotification(responseData.data.b_id, orderData, menu, [ 2690, 3290 ])
 
     return NextResponse.json({
       success: true,
