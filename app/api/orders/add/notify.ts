@@ -17,7 +17,7 @@ interface ProcessedOrder extends Omit<Order, 'orderDays'> {
   orderDays: ProcessedOrderDay[];
 }
 
-function isUrgent(order: Pick<ProcessedOrder, 'orderDays'>): boolean {
+function isUrgent(order: ProcessedOrderDay[]): boolean {
   const current = new Date;
   current.setMinutes(current.getMinutes() + current.getTimezoneOffset() + 300);  // пересчёт часового пояса
   const today = current.toDateString();
