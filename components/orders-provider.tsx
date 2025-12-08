@@ -179,7 +179,7 @@ export const OrdersProvider: React.FC<{
       const res = await commonApi.getSiteStatus()
 
       if (res.success) {
-        setIsMaintenanceMode(!!res.data)
+        setIsMaintenanceMode(!res.data)
       } else {
         setIsMaintenanceMode(false)
       }
