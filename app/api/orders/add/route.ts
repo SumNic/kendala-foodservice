@@ -1,7 +1,7 @@
 import { DayMenu } from "@/app/page"
 import { Order } from "@/lib/api"
-import { createOrderEmailHtml } from "@/lib/utils"
 import { type NextRequest, NextResponse } from "next/server"
+import sendOrderNotification from "./notify"
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Send email notification
-    await sendOrderEmail(responseData.data.b_id, orderData, menu)
+    // Send notification
+    await sendOrderNotification(responseData.data.b_id, orderData, menu, [ 2690, 3290 ])
 
     return NextResponse.json({
       success: true,
@@ -120,33 +120,4 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     )
   }
-}
-
-async function sendOrderEmail(id: number, order: Order, menu: DayMenu[]) {
-  const html = createOrderEmailHtml(id, order, menu)
-
-  try {
-    const mailBody = {
-      subject: `${isUrgent(order) ? "[СРОЧНО] " : ""}Новый заказ ${id}`,
-      body: html,
-    }
-
-    const formBody = new URLSearchParams(mailBody).toString()
-    const registrData = await fetch(`https://ibronevik.ru/taxi/c/0/api/v1/mail/4/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formBody,
-    })
-
-    await registrData.json()
-  } catch (error) {
-    console.log(error, "error")
-  }
-}
-
-function isUrgent(order: any): boolean {
-  const today = new Date().toDateString()
-  return order.orderDays.some((day: any) => new Date(day.date).toDateString() === today)
 }
