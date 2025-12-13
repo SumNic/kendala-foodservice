@@ -18,9 +18,10 @@ export const metadata: Metadata = {
   generator: "v0.dev",
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const token = cookies().get("token")?.value || undefined
-  const hash = cookies().get("hash")?.value || undefined
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
+  const token = cookieStore.get("token")?.value || undefined
+  const hash = cookieStore.get("hash")?.value || undefined
 
   return (
     <html lang="ru">
