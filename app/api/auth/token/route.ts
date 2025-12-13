@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
   try {
+    const cookieStore = await cookies()
     const body = await request.json()
     const formBody = new URLSearchParams(body).toString()
     const registrData = await fetch("https://ibronevik.ru/taxi/c/0/api/v1/token/authorized", {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    cookies().set("token", responseData.data.token, {
+    cookieStore.set("token", responseData.data.token, {
       httpOnly: true,
       secure: true,
       sameSite: "strict",
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 дней
     })
 
-    cookies().set("hash", responseData.data.u_hash, {
+    cookieStore.set("hash", responseData.data.u_hash, {
       httpOnly: true,
       secure: true,
       sameSite: "strict",
