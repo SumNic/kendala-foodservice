@@ -1,5 +1,6 @@
 import { DayMenu } from "@/app/page"
 import { Order } from "@/lib/api"
+import { DELIVERY_FEE, PRICE_DISHES } from "@/lib/constants"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -49,13 +50,12 @@ export const timeUtils = {
 // Price calculations
 export const priceUtils = {
   calculateMealPrice(dishCount: number): number {
-    if (dishCount === 2) return 2390
-    if (dishCount === 3) return 2990
+    if (dishCount === 4) return PRICE_DISHES
     return 0
   },
 
   calculateDeliveryFee(): number {
-    return 300
+    return DELIVERY_FEE
   },
 
   calculateOrderTotal(

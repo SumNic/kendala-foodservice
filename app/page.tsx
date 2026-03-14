@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { useLanguage } from "@/components/language-provider"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { Clock, ShoppingCart } from "lucide-react"
@@ -22,17 +23,18 @@ import { reachGoal } from "@/lib/metrics/yandexMetrics"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import Image from "next/image"
 import {
-  ORDER_END_HOUR,
-  ORDER_END_MINUTS,
   ORDER_START_HOUR,
   ORDER_START_MINUTS,
+  DELIVERY_FEE,
+  PRICE_DISHES,
+  TEST_INDEX,
 } from "@/lib/constants"
 
 export interface Dish {
   id: string
   name: string
-  description: string
-  calories: number
+  description?: string
+  calories?: number
 }
 
 export interface DayMenu {
@@ -48,6 +50,7 @@ interface OrderDay {
   selectedDishes: string[]
   deliveryTime: string
   quantity: number
+  note?: string
 }
 
 export default function OrderPage() {
@@ -69,11 +72,10 @@ export default function OrderPage() {
     const now = new Date()
     const hours = now.getHours()
     const minutes = now.getMinutes()
+    const isAfterOrderStart =
+      hours > ORDER_START_HOUR || (hours === ORDER_START_HOUR && minutes >= ORDER_START_MINUTS)
 
-    if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR)
-      setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-    if (minutes >= ORDER_START_MINUTS && hours >= ORDER_START_HOUR && hours < ORDER_END_HOUR)
-      setTimeRestrictionMessage(t("order.orderClosed"))
+    if (isAfterOrderStart) setTimeRestrictionMessage(t("order.orderClosed"))
 
     // Check if ordering is allowed based on current time
     const interval = setInterval(() => {
@@ -81,32 +83,13 @@ export default function OrderPage() {
       const currentDay = now.getDay()
       const hours = now.getHours()
       const minutes = now.getMinutes()
+      const isAfterOrderStart =
+        hours > ORDER_START_HOUR || (hours === ORDER_START_HOUR && minutes >= ORDER_START_MINUTS)
 
-      if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR)
-        setTimeRestrictionMessage(t("order.orderClosesTomorrow"))
-      if (minutes >= ORDER_START_MINUTS && hours >= ORDER_START_HOUR && hours < ORDER_END_HOUR)
-        setTimeRestrictionMessage(t("order.orderClosed"))
-
-      if (
-        minutes >= ORDER_START_MINUTS &&
-        hours >= ORDER_START_HOUR &&
-        hours < ORDER_END_HOUR &&
-        menu.length &&
-        menu[currentDay - 1]?.isAvailable !== false
-      ) {
+      if (isAfterOrderStart) setTimeRestrictionMessage(t("order.orderClosed"))
+      if (TEST_INDEX === 1 && isAfterOrderStart && menu.length && menu[currentDay - 1]?.isAvailable !== false) {
         const newMenu = cloneDeep(menu)
         newMenu[currentDay - 1].isAvailable = false
-        setMenu(newMenu)
-      }
-
-      if (
-        minutes >= ORDER_END_MINUTS &&
-        hours >= ORDER_END_HOUR &&
-        menu.length &&
-        menu[currentDay]?.isAvailable !== false
-      ) {
-        const newMenu = cloneDeep(menu)
-        newMenu[currentDay].isAvailable = false
         setMenu(newMenu)
       }
     }, 1000 * 60) // проверка каждую минуту
@@ -124,14 +107,16 @@ export default function OrderPage() {
     if (existingIndex >= 0) {
       setOrderDays(orderDays.filter((_, index) => index !== existingIndex))
     } else {
+      const firstDrinkId = dayMenu.dishes[6]?.id
       setOrderDays([
         ...orderDays,
         {
           day: dayMenu.day,
           date: dayMenu.date,
-          selectedDishes: [],
+          selectedDishes: firstDrinkId ? [firstDrinkId] : [],
           deliveryTime: "12:00",
           quantity: 1,
+          note: "",
         },
       ])
     }
@@ -144,21 +129,22 @@ export default function OrderPage() {
   const updateOrderDay = (day: string, updates: Partial<OrderDay>) => {
     const hours = updates.deliveryTime?.slice(0, 2)
     const minutes = updates.deliveryTime?.slice(3)
-    if (
-      (hours && +hours < 12) ||
-      (hours && +hours >= 15 && minutes && +minutes > 30) ||
-      (hours && +hours >= 16)
-    ) {
+    if ((hours && +hours < 12) || (hours && +hours >= 16)) {
       toast({
         title: t("common.error"),
-        description: "Доставка с 12:00 до 15:30",
+        description: t("order.toast.deliveryTimeRange"),
         variant: "destructive",
       })
     }
     setOrderDays(orderDays.map((od) => (od.day === day ? { ...od, ...updates } : od)))
   }
 
-  const toggleDish = (day: string, dishId: string) => {
+  const selectDish = (
+    day: string,
+    dishId: string,
+    groupDishIds: string[],
+    isMandatoryGroup: boolean,
+  ) => {
     const orderDay = orderDays.find((od) => od.day === day)
     if (!orderDay) return
 
@@ -167,17 +153,26 @@ export default function OrderPage() {
 
     let newDishes: string[]
     if (isSelected) {
-      newDishes = currentDishes.filter((id) => id !== dishId)
-    } else {
-      if (currentDishes.length >= 3) {
+      if (isMandatoryGroup) {
         toast({
           title: t("common.error"),
-          description: "Максимум 3 блюда в день",
+          description: t("order.toast.drinkRequired"),
           variant: "destructive",
         })
         return
       }
-      newDishes = [...currentDishes, dishId]
+      newDishes = currentDishes.filter((id) => id !== dishId)
+    } else {
+      const withoutGroup = currentDishes.filter((id) => !groupDishIds.includes(id))
+      if (withoutGroup.length >= 4) {
+        toast({
+          title: t("common.error"),
+          description: t("order.toast.maxThreeDishes"),
+          variant: "destructive",
+        })
+        return
+      }
+      newDishes = [...withoutGroup, dishId]
     }
 
     updateOrderDay(day, { selectedDishes: newDishes })
@@ -188,12 +183,10 @@ export default function OrderPage() {
 
     orderDays.forEach((orderDay) => {
       const dishCount = orderDay.selectedDishes.length
-      if (dishCount === 2) {
-        total += 2390 * orderDay.quantity
-      } else if (dishCount === 3) {
-        total += 2990 * orderDay.quantity
+      if (dishCount === 4) {
+        total += PRICE_DISHES * orderDay.quantity
       }
-      total += 300 * orderDay.quantity // Delivery fee
+      total += DELIVERY_FEE * orderDay.quantity // Delivery fee
     })
 
     return total
@@ -206,36 +199,47 @@ export default function OrderPage() {
     return true
   }
 
-  const canSubmitOrderTwoDishes = () => {
+  const canSubmitOrderThreeDishes = () => {
     return (
-      orderDays.every(
-        (od) =>
-          od.selectedDishes.length >= 2 &&
-          od.selectedDishes.length <= 3 &&
-          od.deliveryTime &&
-          od.quantity > 0,
-      ) && orderDays.length > 0
+      orderDays.every((od) => {
+        const dayMenu = menu.find((m) => m.day === od.day)
+        const drinkIds = dayMenu?.dishes.slice(6, 8).map((dish) => dish.id) || []
+        const hasDrink = drinkIds.some((id) => od.selectedDishes.includes(id))
+        return od.selectedDishes.length === 4 && od.deliveryTime && od.quantity > 0 && hasDrink
+      }) && orderDays.length > 0
     )
+  }
+
+  const getRequiredGroupWarning = (dayMenu: DayMenu, orderDay?: OrderDay) => {
+    if (!orderDay) return ""
+    const selected = orderDay.selectedDishes
+    const saladIds = dayMenu.dishes.slice(0, 2).map((dish) => dish.id)
+    const soupIds = dayMenu.dishes.slice(2, 4).map((dish) => dish.id)
+    const mainIds = dayMenu.dishes.slice(4, 6).map((dish) => dish.id)
+    const hasSalad = saladIds.some((id) => selected.includes(id))
+    const hasSoup = soupIds.some((id) => selected.includes(id))
+    const hasMain = mainIds.some((id) => selected.includes(id))
+    if (hasSalad && hasSoup && hasMain) return ""
+    return t("order.requiredCoreDishes")
   }
 
   const submitOrder = async () => {
     if (!canSubmitOrder()) {
       toast({
         title: t("common.error"),
-        description: "Заполните все обязательные поля",
+        description: t("order.toast.fillRequired"),
         variant: "destructive",
       })
       return
     }
-    if (!canSubmitOrderTwoDishes()) {
+    if (!canSubmitOrderThreeDishes()) {
       toast({
         title: t("common.error"),
-        description: "Можно заказать не менее двух блюд в день",
+        description: t("order.toast.minThreeDishes"),
         variant: "destructive",
-      })
+      })      
       return
     }
-    // },
 
     // Here you would send to your backend API
     const orderData = {
@@ -252,12 +256,12 @@ export default function OrderPage() {
     if (res.success) {
       toast({
         title: t("common.success"),
-        description: "Заказ успешно оформлен!",
+        description: t("order.toast.success"),
       })
     } else {
       toast({
         title: t("common.error"),
-        description: res.error || "Ошибка при оформлении заказа",
+        description: res.error || t("order.toast.submitError"),
         variant: "destructive",
       })
       return
@@ -311,9 +315,29 @@ export default function OrderPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-[#003D82] mb-2">{t("order.title")}</h1>
+          <div className="rounded-xl border border-[#00A8E8]/30 bg-white/80 p-5 shadow-sm backdrop-blur-sm">
+            <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-[#003D82]">
+              {t("order.hero.title")}
+            </h1>
+            <p className="text-xs sm:text-sm uppercase tracking-wide text-[#00A8E8] font-semibold">
+              {t("order.hero.slogan")}
+            </p>
+            <p className="mt-3 text-sm sm:text-base text-[#003D82]/80">
+              {t("order.hero.line1")}
+            </p>
+            <p className="mt-1 text-sm sm:text-base text-[#003D82]/80">
+              {t("order.hero.line2")}
+            </p>
+            <div className="mt-4 rounded-lg border border-[#FF9F1C] bg-gradient-to-r from-[#FFF2E0] to-white px-4 py-3 text-sm text-[#7A3E00] shadow-sm">
+              <p className="font-semibold">{t("order.weeklyBonus.title")}</p>
+              <div className="mt-1 text-xs sm:text-sm text-[#7A3E00]/80">
+                {t("order.weeklyBonus.subtitle")} {t("order.weeklyBonus.note1")},{" "}
+                {t("order.weeklyBonus.note2")}
+              </div>
+            </div>
+          </div>
           {timeRestrictionMessage && (
-            <Alert className="bg-red-50 border-red-200 flex">
+            <Alert className="bg-red-50 border-red-200 flex mt-4">
               <Clock className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">{timeRestrictionMessage}</AlertDescription>
             </Alert>
@@ -329,9 +353,7 @@ export default function OrderPage() {
                   {t("order.selectDishes")}
                 </CardTitle>
                 <div className="text-white text-sm mb-6 pb-4 border-b border-[#00A8E8]">
-                  <span className="font-semibold">{t("order.price2dishes")}</span>
-                  <span className="mx-4">•</span>
-                  <span className="font-semibold">{t("order.price3dishes")}</span>
+                  <span className="font-semibold">{t("order.pricedishes")}</span>
                   <span className="mx-4">•</span>
                   <span className="font-semibold">{t("order.deliveryFee")}</span>
                 </div>
@@ -448,47 +470,132 @@ export default function OrderPage() {
                       </div>
 
                       {isSelected && (
-                        <div className="grid gap-3">
-                          {dayMenu.dishes.map((dish) => (
-                            <div
-                              key={dish.id}
-                              className={`bg-[#001F3F] border  rounded p-3 cursor-pointer transition-colors ${
-                                orderDay.selectedDishes.includes(dish.id)
-                                  ? "border-orange-500 bg-[#003366]"
-                                  : "border-[#00A8E8]/30 md:hover:border-[#00A8E8] md:transition"
-                              }`}
-                              onClick={() => {
-                                toggleDish(dayMenu.day, dish.id)
-                                reachGoal("selectDish")
-                              }}
-                            >
-                              <div className="flex flex-col sm:flex-row justify-between items-start">
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-white">{dish.name}</h4>
-                                  <p className="text-sm text-[#87CEEB] mt-1 w-full">
-                                    {dish.description}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant="secondary"
-                                  className="mt-2 sm:mt-0 sm:ml-2 bg-[#00A8E8] text-white border-0"
-                                >
-                                  {dish.calories} {t("common.calories")}
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <>
+                          <div className="grid gap-4">
+                            {[
+                              {
+                                key: "salads",
+                                title: t("order.group.salads"),
+                                items: dayMenu.dishes.slice(0, 2),
+                              },
+                              {
+                                key: "soups",
+                                title: t("order.group.soups"),
+                                items: dayMenu.dishes.slice(2, 4),
+                              },
+                              {
+                                key: "mains",
+                                title: t("order.group.mains"),
+                                items: dayMenu.dishes.slice(4, 6),
+                              },
+                              {
+                                key: "drinks",
+                                title: t("order.group.drinks"),
+                                items: dayMenu.dishes.slice(6, 8),
+                              },
+                            ]
+                              .filter((group) => group.items.length > 0)
+                              .map((group) => {
+                                const groupDishIds = group.items.map((item) => item.id)
+                                const isMandatoryGroup = group.key === "drinks"
+                                return (
+                                  <div key={group.key} className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="text-sm font-semibold text-white">
+                                        {group.title}
+                                      </h4>
+                                      <span className="text-xs text-[#87CEEB]">
+                                        {t("order.group.oneOfTwo")}
+                                      </span>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                      {group.items.map((dish) => (
+                                        <div
+                                          key={dish.id}
+                                          className={`bg-[#001F3F] border rounded p-3 cursor-pointer transition-colors ${
+                                            orderDay.selectedDishes.includes(dish.id)
+                                              ? "border-orange-500 bg-[#003366]"
+                                              : "border-[#00A8E8]/30 md:hover:border-[#00A8E8] md:transition"
+                                          }`}
+                                          onClick={() => {
+                                            selectDish(
+                                              dayMenu.day,
+                                              dish.id,
+                                              groupDishIds,
+                                              isMandatoryGroup,
+                                            )
+                                            reachGoal("selectDish")
+                                          }}
+                                        >
+                                          <div className="flex h-full flex-col gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <h4 className="font-medium text-white">
+                                                {dish.name}
+                                              </h4>
+                                            </div>
+                                            {dish.description && (
+                                              <p className="text-sm text-[#87CEEB] w-full">
+                                                {dish.description}
+                                              </p>
+                                            )}
+                                            {dish.calories !== undefined && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="mt-auto w-fit bg-[#00A8E8] text-white border-0"
+                                              >
+                                                {dish.calories} {t("common.calories")}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                          </div>
+
+                      <div className="mt-4 rounded-md border border-[#00A8E8]/40 bg-[#001F3F] p-3 text-sm text-[#87CEEB]">
+                        <p className="font-semibold text-white">{t("order.extras.title")}</p>
+                        <p>
+                          {t("order.extras.desserts")}{" "}
+                          <span className="font-semibold text-white">
+                            {t("order.extras.dessertsPrice")}
+                          </span>
+                        </p>
+                        <p>
+                          {t("order.extras.pastries")}{" "}
+                          <span className="font-semibold text-white">
+                            {t("order.extras.pastriesPrice")}
+                          </span>
+                        </p>
+                        <p className="mt-2 text-[#87CEEB]">{t("order.extras.note")}</p>
+                      </div>
+                          <div className="mt-3 space-y-2">
+                            <Label className="text-white text-sm">{t("order.note.title")}</Label>
+                            <Textarea
+                              value={orderDay?.note || ""}
+                              onChange={(e) =>
+                                updateOrderDay(dayMenu.day, {
+                                  note: e.target.value,
+                                })
+                              }
+                              placeholder={t("order.note.placeholder")}
+                              className="min-h-[90px] bg-[#001F3F] border-[#00A8E8] text-white placeholder:text-[#87CEEB] text-sm sm:text-base placeholder:text-xs sm:placeholder:text-sm"
+                            />
+                          </div>
+                        </>
                       )}
-                      {orderDay &&
-                        orderDay.selectedDishes.length >= 0 &&
-                        orderDay.selectedDishes.length < 2 && (
+                      {(() => {
+                        const warning = getRequiredGroupWarning(dayMenu, orderDay)
+                        return warning ? (
                           <Alert className="mt-4 bg-yellow-900/30 border-yellow-600">
                             <AlertDescription className="text-yellow-200">
-                              {t("order.dishesRequired")}
+                              {warning}
                             </AlertDescription>
                           </Alert>
-                        )}
+                        ) : null
+                      })()}
                     </div>
                   )
                 })}
@@ -651,13 +758,13 @@ export default function OrderPage() {
                       {orderDays.map((orderDay) => {
                         const dayMenu = menu.find((m) => m.day === orderDay.day)
                         const dishCount = orderDay.selectedDishes.length
-                        const mealPrice = dishCount === 2 ? 2390 : dishCount === 3 ? 2990 : 0
-                        const deliveryPrice = 300
+                        const mealPrice = dishCount === 4 ? PRICE_DISHES : 0
+                        const deliveryPrice = DELIVERY_FEE
 
                         return (
                           <div key={orderDay.day} className="flex justify-between">
                             <span className="text-white text-sm">
-                              {getDayName(orderDay.day)} ({dishCount} {t("order.dishes")} ×{" "}
+                              {getDayName(orderDay.day)} ({dishCount - 1} {t("order.dishes")} ×{" "}
                               {orderDay.quantity})
                             </span>
                             <span className="text-white text-sm">

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { TEST_INDEX } from "@/lib/constants"
 
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: JSON.parse(responseData.data.data.lang_vls.dishes[1]),
+      data: JSON.parse(responseData.data.data.lang_vls.dishes[TEST_INDEX]),
     })
   } catch (error) {
     return NextResponse.json(

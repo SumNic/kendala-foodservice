@@ -24,6 +24,7 @@ import { Upload, Download, Search } from "lucide-react"
 import { authApi, commonApi, menuApi, ordersApi } from "@/lib/api"
 import * as XLSX from "xlsx"
 import { useOrders } from "@/components/orders-provider"
+import { TEST_INDEX } from "@/lib/constants"
 import {
   Dialog,
   DialogContent,
@@ -280,7 +281,7 @@ export default function AdminPage() {
         const dataDishes = {
           lang_vls: {
             dishes: {
-              1: JSON.stringify(jsonData),
+              [TEST_INDEX]: JSON.stringify(jsonData),
             },
           },
         }
@@ -667,12 +668,12 @@ export default function AdminPage() {
           <TabsContent value="orders">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <span>Управление заказами</span>
                   <Button
                     onClick={() => setIsExportOpen(true)}
                     variant="outline"
-                    className="flex items-center gap-2 bg-transparent"
+                    className="flex w-full items-center justify-center gap-2 bg-transparent sm:w-auto"
                   >
                     <Download className="h-4 w-4" />
                     Экспорт в Excel
@@ -717,6 +718,7 @@ export default function AdminPage() {
                         <TableHead>Статус</TableHead>
                         <TableHead>Сумма</TableHead>
                         <TableHead>Оплата</TableHead>
+                        <TableHead className="min-w-[400px]">Примечание</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -795,6 +797,19 @@ export default function AdminPage() {
                             >
                               {order.paymentMethod === "cash" ? "Наличные" : "Счет"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {order.orderDays.some((day) => day.note) ? (
+                              order.orderDays.map((day, index) =>
+                                day.note ? (
+                                  <div key={`${index}`} className="text-sm">
+                                    <div>{day.note}</div>
+                                  </div>
+                                ) : null,
+                              )
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

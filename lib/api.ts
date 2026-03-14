@@ -1,5 +1,6 @@
 // API utility functions for backend integration
 import { DayMenu } from "@/app/page"
+import { LC } from "@/lib/constants"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -32,6 +33,7 @@ export interface Order {
     selectedDishes: string[]
     deliveryTime: string
     quantity: number
+    note?: string
   }>
   paymentMethod: "cash" | "invoice"
   total: number
@@ -164,7 +166,8 @@ export const ordersApi = {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        // lc - количество возвращаемых элементов
+        body: JSON.stringify({...data, lc: LC}),
       })
       return await response.json()
     } catch (error) {

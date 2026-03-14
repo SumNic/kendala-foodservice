@@ -9,10 +9,9 @@ import { commonApi, menuApi, Order, ordersApi } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/components/language-provider"
 import {
-  ORDER_END_HOUR,
-  ORDER_END_MINUTS,
   ORDER_START_HOUR,
   ORDER_START_MINUTS,
+  TEST_INDEX,
 } from "@/lib/constants"
 
 type WeekDay = {
@@ -84,19 +83,13 @@ export const OrdersProvider: React.FC<{
     const currentDay = now.getDay()
     const hours = now.getHours()
     const minutes = now.getMinutes()
+    const isAfterOrderStart =
+      hours > ORDER_START_HOUR ||
+      (hours === ORDER_START_HOUR && minutes >= ORDER_START_MINUTS)
 
     const blockDaysMenu = menu.map((item, numberDay) => {
-      if (minutes >= ORDER_END_MINUTS && hours >= ORDER_END_HOUR && numberDay <= currentDay) {
-        return {
-          ...item,
-          isAvailable: false,
-        }
-      }
-      if (
-        minutes >= ORDER_START_MINUTS &&
-        hours >= ORDER_START_HOUR &&
-        numberDay + 1 <= currentDay
-      ) {
+      if (TEST_INDEX === 1) {
+        if (isAfterOrderStart && numberDay + 1 <= currentDay) {
         return {
           ...item,
           isAvailable: false,
@@ -107,6 +100,7 @@ export const OrdersProvider: React.FC<{
           ...item,
           isAvailable: false,
         }
+      }
       }
       return {
         ...item,
