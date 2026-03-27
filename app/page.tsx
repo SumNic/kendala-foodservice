@@ -20,7 +20,22 @@ import { useOrders } from "@/components/orders-provider"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
 import { reachGoal } from "@/lib/metrics/yandexMetrics"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Modal,
+  ModalClose,
+  ModalContent,
+  ModalDescription,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
+} from "@/components/ui/modal"
 import Image from "next/image"
 import {
   ORDER_START_HOUR,
@@ -56,7 +71,7 @@ interface OrderDay {
 export default function OrderPage() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { menu, setMenu, isMaintenanceMode } = useOrders()
+  const { menu, setMenu, isMaintenanceMode, isBannerVisible, banner } = useOrders()
   const [orderDays, setOrderDays] = useState<OrderDay[]>([])
   const [customerInfo, setCustomerInfo] = useState({
     fullName: "",
@@ -67,6 +82,10 @@ export default function OrderPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "invoice">("cash")
   const [timeRestrictionMessage, setTimeRestrictionMessage] = useState("")
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false)
+  const [isBannerReady, setIsBannerReady] = useState(false)
+  const [bannerSize, setBannerSize] = useState<{ width: number; height: number } | null>(null)
+  const [isBannerImageLoaded, setIsBannerImageLoaded] = useState(false)
 
   useEffect(() => {
     const now = new Date()
@@ -87,7 +106,12 @@ export default function OrderPage() {
         hours > ORDER_START_HOUR || (hours === ORDER_START_HOUR && minutes >= ORDER_START_MINUTS)
 
       if (isAfterOrderStart) setTimeRestrictionMessage(t("order.orderClosed"))
-      if (TEST_INDEX === 1 && isAfterOrderStart && menu.length && menu[currentDay - 1]?.isAvailable !== false) {
+      if (
+        TEST_INDEX === 1 &&
+        isAfterOrderStart &&
+        menu.length &&
+        menu[currentDay - 1]?.isAvailable !== false
+      ) {
         const newMenu = cloneDeep(menu)
         newMenu[currentDay - 1].isAvailable = false
         setMenu(newMenu)
@@ -96,6 +120,41 @@ export default function OrderPage() {
 
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!banner?.url || !isBannerVisible) {
+      setIsBannerModalOpen(false)
+      setIsBannerReady(false)
+      setBannerSize(null)
+      return
+    }
+
+    let isActive = true
+    setIsBannerReady(false)
+    setIsBannerImageLoaded(false)
+    const img = new window.Image()
+    img.src = banner.url
+    img.onload = () => {
+      if (!isActive) return
+      const width = img.naturalWidth || img.width
+      const height = img.naturalHeight || img.height
+      if (width && height) {
+        setBannerSize({ width, height })
+      }
+      setIsBannerReady(true)
+      setIsBannerModalOpen(true)
+    }
+    img.onerror = () => {
+      if (!isActive) return
+      setIsBannerReady(false)
+      setIsBannerImageLoaded(false)
+      setIsBannerModalOpen(false)
+    }
+
+    return () => {
+      isActive = false
+    }
+  }, [banner?.url, isBannerVisible])
 
   const getDayName = (day: string) => {
     return t(`day.${day}`)
@@ -128,7 +187,6 @@ export default function OrderPage() {
 
   const updateOrderDay = (day: string, updates: Partial<OrderDay>) => {
     const hours = updates.deliveryTime?.slice(0, 2)
-    const minutes = updates.deliveryTime?.slice(3)
     if ((hours && +hours < 12) || (hours && +hours >= 16)) {
       toast({
         title: t("common.error"),
@@ -237,7 +295,7 @@ export default function OrderPage() {
         title: t("common.error"),
         description: t("order.toast.minThreeDishes"),
         variant: "destructive",
-      })      
+      })
       return
     }
 
@@ -288,6 +346,12 @@ export default function OrderPage() {
           closeOnOutsideClick={false}
           className="max-w-md bg-white shadow-lg rounded-lg"
         >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Технические работы</DialogTitle>
+            <DialogDescription>
+              Сайт временно недоступен для заказов из-за технических работ.
+            </DialogDescription>
+          </DialogHeader>
           <div className="flex flex-col items-center gap-4 text-center">
             <Image
               src="warning-order.jpg"
@@ -313,6 +377,50 @@ export default function OrderPage() {
         </DialogContent>
       </Dialog>
 
+      <Modal
+        open={isBannerModalOpen && isBannerReady}
+        onOpenChange={(open) => {
+          setIsBannerModalOpen(open)
+        }}
+        aria-labelledby="maintenance-modal"
+      >
+          <ModalContent
+          className="p-0 overflow-hidden w-auto max-w-none"
+        >
+          <ModalHeader className="sr-only">
+            <ModalTitle>Баннер</ModalTitle>
+            <ModalDescription>Просмотр текущего промо-баннера.</ModalDescription>
+          </ModalHeader>
+          <div
+            className={`flex flex-col transition-opacity duration-500 ease-out ${
+              isBannerImageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <div className="bg-white overflow-hidden flex justify-center">
+              {banner?.url && bannerSize && (
+                <Image
+                  src={banner.url}
+                  alt="Акция"
+                  width={bannerSize.width}
+                  height={bannerSize.height}
+                  className="block h-auto w-auto max-h-[80vh] max-w-[90vw] object-contain"
+                  sizes="(max-width: 768px) 90vw, 640px"
+                  priority
+                  onLoad={() => setIsBannerImageLoaded(true)}
+                />
+              )}
+            </div>
+            {isBannerImageLoaded && (
+              <ModalFooter className="px-0 pb-0 pt-0">
+                <ModalClose asChild>
+                  <Button className="w-full h-10 rounded-t-none">Ок</Button>
+                </ModalClose>
+              </ModalFooter>
+            )}
+          </div>
+        </ModalContent>
+      </Modal>
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <div className="rounded-xl border border-[#00A8E8]/30 bg-white/80 p-5 shadow-sm backdrop-blur-sm">
@@ -322,12 +430,8 @@ export default function OrderPage() {
             <p className="text-xs sm:text-sm uppercase tracking-wide text-[#00A8E8] font-semibold">
               {t("order.hero.slogan")}
             </p>
-            <p className="mt-3 text-sm sm:text-base text-[#003D82]/80">
-              {t("order.hero.line1")}
-            </p>
-            <p className="mt-1 text-sm sm:text-base text-[#003D82]/80">
-              {t("order.hero.line2")}
-            </p>
+            <p className="mt-3 text-sm sm:text-base text-[#003D82]/80">{t("order.hero.line1")}</p>
+            <p className="mt-1 text-sm sm:text-base text-[#003D82]/80">{t("order.hero.line2")}</p>
             <div className="mt-4 rounded-lg border border-[#FF9F1C] bg-gradient-to-r from-[#FFF2E0] to-white px-4 py-3 text-sm text-[#7A3E00] shadow-sm">
               <p className="font-semibold">{t("order.weeklyBonus.title")}</p>
               <div className="mt-1 text-xs sm:text-sm text-[#7A3E00]/80">
@@ -555,22 +659,22 @@ export default function OrderPage() {
                               })}
                           </div>
 
-                      <div className="mt-4 rounded-md border border-[#00A8E8]/40 bg-[#001F3F] p-3 text-sm text-[#87CEEB]">
-                        <p className="font-semibold text-white">{t("order.extras.title")}</p>
-                        <p>
-                          {t("order.extras.desserts")}{" "}
-                          <span className="font-semibold text-white">
-                            {t("order.extras.dessertsPrice")}
-                          </span>
-                        </p>
-                        <p>
-                          {t("order.extras.pastries")}{" "}
-                          <span className="font-semibold text-white">
-                            {t("order.extras.pastriesPrice")}
-                          </span>
-                        </p>
-                        <p className="mt-2 text-[#87CEEB]">{t("order.extras.note")}</p>
-                      </div>
+                          <div className="mt-4 rounded-md border border-[#00A8E8]/40 bg-[#001F3F] p-3 text-sm text-[#87CEEB]">
+                            <p className="font-semibold text-white">{t("order.extras.title")}</p>
+                            <p>
+                              {t("order.extras.desserts")}{" "}
+                              <span className="font-semibold text-white">
+                                {t("order.extras.dessertsPrice")}
+                              </span>
+                            </p>
+                            <p>
+                              {t("order.extras.pastries")}{" "}
+                              <span className="font-semibold text-white">
+                                {t("order.extras.pastriesPrice")}
+                              </span>
+                            </p>
+                            <p className="mt-2 text-[#87CEEB]">{t("order.extras.note")}</p>
+                          </div>
                           <div className="mt-3 space-y-2">
                             <Label className="text-white text-sm">{t("order.note.title")}</Label>
                             <Textarea
@@ -756,7 +860,6 @@ export default function OrderPage() {
                   <CardContent>
                     <div className="space-y-2 text-sm">
                       {orderDays.map((orderDay) => {
-                        const dayMenu = menu.find((m) => m.day === orderDay.day)
                         const dishCount = orderDay.selectedDishes.length
                         const mealPrice = dishCount === 4 ? PRICE_DISHES : 0
                         const deliveryPrice = DELIVERY_FEE

@@ -1,17 +1,19 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 
 import { DayMenu } from "@/app/page"
 
-import { commonApi, menuApi, Order, ordersApi } from "@/lib/api"
+import { commonApi, dropboxApi, menuApi, Order, ordersApi } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useLanguage } from "@/components/language-provider"
 import {
   ORDER_START_HOUR,
   ORDER_START_MINUTS,
   TEST_INDEX,
+  BANNER,
 } from "@/lib/constants"
 
 type WeekDay = {
@@ -33,6 +35,12 @@ interface OrdersContextType {
   getCurrentWeekDays: () => WeekDay[]
   isMaintenanceMode: boolean
   setIsMaintenanceMode: (status: boolean) => void
+  isBannerVisible: boolean
+  setIsBannerVisible: (status: boolean) => void
+  banner: { url: string; dlId: string } | null
+  setBanner: (banner: { url: string; dlId: string } | null) => void
+  loadBanner: () => Promise<void>
+  isLoadingBanner: boolean
 }
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined)
@@ -46,10 +54,14 @@ export const OrdersProvider: React.FC<{
   const { toast } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false)
+  const [isBannerVisible, setIsBannerVisible] = useState(true)
+  const [banner, setBanner] = useState<{ url: string; dlId: string } | null>(null)
   const [menu, setMenu] = useState<DayMenu[]>([])
   const [token, setToken] = useState<string | undefined>(initialToken)
   const [hash, setHash] = useState<string | undefined>(initialHash)
   const [initialized, setInitialized] = useState(false)
+  const [isLoadingBanner, setIsLoadingBanner] = useState(false)
+  const pathname = usePathname()
 
   const getMenu = async (currentWeekDays: WeekDay[]) => {
     // отправляем запрос на получение кода
@@ -143,7 +155,7 @@ export const OrdersProvider: React.FC<{
         Object.values(res?.data?.data.booking).forEach((elem: any) => {
           const id = elem.b_id
           const status = elem.b_start_address
-          const orderFromServer = elem.b_options?.tickets?.seats[123][1]
+          const orderFromServer = elem.b_options?.tickets?.seats[123][TEST_INDEX]
           if (orderFromServer?.customer) {
             const order: Order = { id, ...orderFromServer, status }
             orders.push(order)
@@ -183,6 +195,66 @@ export const OrdersProvider: React.FC<{
     }
   }
 
+  const getBannerStatus = async () => {
+    try {
+      const res = await commonApi.getBannerStatus()
+
+      if (res.success) {
+        setIsBannerVisible(!!res.data.value)
+      } else {
+        setIsBannerVisible(false)
+      }
+    } catch (error) {
+      setIsBannerVisible(false)
+      console.error(error)
+    }
+  }
+
+  const loadBanner = useCallback(async () => {
+    setIsLoadingBanner(true)
+    try {
+      const res = await dropboxApi.getFiles({private: '-1'})
+      if (!res.success) {
+        setBanner(null)
+        return
+      }
+      
+
+      const filesMap =
+        res.data?.data?.["dropbox files"] ?? res.data?.["dropbox files"] ?? undefined
+
+      if (!filesMap || typeof filesMap !== "object") {
+        setBanner(null)
+        return
+      }
+
+      const entries = Object.values(filesMap) as Array<{
+        dl_id?: string
+        json?: { name?: string; name_upload?: string }
+      }>
+
+      const match = entries.find((entry) => {
+        const name = entry.json?.name || entry.json?.name_upload || ""
+        const base = name.split(".")[0]?.toLowerCase()
+        return base === BANNER.toLowerCase()
+      })
+
+      if (match?.dl_id) {
+        setBanner({
+          url: `https://ibronevik.ru/taxi/api/v1/dropbox/file/${match.dl_id}`,
+          dlId: match.dl_id,
+        })
+      } else {
+        setBanner(null)
+      }
+    } catch (error) {
+      console.error(error)
+      setBanner(null)
+    } finally {
+      setIsLoadingBanner(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (token && hash) {
       getOrders()
@@ -192,8 +264,13 @@ export const OrdersProvider: React.FC<{
 
   useEffect(() => {
     getSiteStatus()
+    getBannerStatus()
     const currentWeekDays = getCurrentWeekDays()
     if (currentWeekDays?.length) getMenu(currentWeekDays)
+  }, [])
+
+  useEffect(() => {
+      void loadBanner()
   }, [])
 
   if (!initialized) {
@@ -216,6 +293,12 @@ export const OrdersProvider: React.FC<{
         getCurrentWeekDays,
         isMaintenanceMode,
         setIsMaintenanceMode,
+        isBannerVisible,
+        setIsBannerVisible,
+        banner,
+        setBanner,
+        loadBanner,
+        isLoadingBanner
       }}
     >
       {children}

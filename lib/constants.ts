@@ -16,15 +16,18 @@ type Mode = 1 | 2
 type ModeNotif = 0 | 1
 /**
  * 2 - для тестирования, 1 - для прода
+ * в режиме тестирования отключается блокировка дней и загрузка заказов и меню не использует данные прода
  */
 export const TEST_INDEX: Mode = 1
 
 /**
  * 0 - отключение уведомлений на почту и телеграм, 1 - включение
  */
-export const IS_SEND_NOTIFICATION = 0
+export const IS_SEND_NOTIFICATION: ModeNotif = 1
 
 /**
  * количество отображаемых заказов
  */
 export const LC = 20
+
+export const BANNER = "banner-azure" 
