@@ -1,5 +1,6 @@
 // API utility functions for backend integration
 import { DayMenu } from "@/app/page"
+import { LC } from "@/lib/constants"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
@@ -13,6 +14,22 @@ export interface MenuUpload {
   data: string
   token?: string
   u_hash?: string
+}
+
+export interface DropboxFileUpload {
+  file: string
+  token?: string
+  u_hash?: string
+}
+
+export interface DropboxFileSelectParams {
+  ids?: string[]
+  private?: string
+  deleted?: string
+}
+
+export interface DropboxFileGetParams {
+  id: string
 }
 
 export const statuses = ["new", "accepted", "paid", "delivered"] as const
@@ -32,6 +49,7 @@ export interface Order {
     selectedDishes: string[]
     deliveryTime: string
     quantity: number
+    note?: string
   }>
   paymentMethod: "cash" | "invoice"
   total: number
@@ -140,6 +158,32 @@ export const menuApi = {
   },
 }
 
+/**
+ * Работа с файлами
+ */
+export const dropboxApi = {
+  async uploadFile(data: DropboxFileUpload): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/dropbox/file`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+    return response.json()
+  },
+
+  async getFiles(params: DropboxFileSelectParams = {}): Promise<ApiResponse<any>> {
+    const { ids, private: privateValue, deleted } = params
+    const idsPath = ids && ids.length > 0 ? ids.join(",") : "null"
+    const response = await fetch(`${API_BASE_URL}/api/dropbox/file/${idsPath}/select`, {
+      method: "POST",
+      body: JSON.stringify({
+        private: privateValue,
+        deleted,
+      }),
+    })
+    return response.json()
+  },
+}
+
 // Orders API
 export const ordersApi = {
   async createOrder(order: Order, menu: DayMenu[]): Promise<ApiResponse<Order>> {
@@ -164,7 +208,8 @@ export const ordersApi = {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        // lc - количество возвращаемых элементов
+        body: JSON.stringify({...data, lc: LC}),
       })
       return await response.json()
     } catch (error) {
@@ -245,6 +290,21 @@ export const commonApi = {
 
   async getSiteStatus(): Promise<ApiResponse<any>> {
     const response = await fetch(`${API_BASE_URL}/api/common/status`, {
+      method: "GET",
+    })
+    return response.json()
+  },
+
+  async setBannerStatus(data: MenuUpload): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/common/banner`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+    return response.json()
+  },
+
+  async getBannerStatus(): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/common/banner`, {
       method: "GET",
     })
     return response.json()

@@ -35,7 +35,12 @@ export default function AboutPage() {
               <ul className="list-disc list-inside space-y-2 ml-2">
                 <li>{t("about.li1")}</li>
                 <li>{t("about.li2")}</li>
+                <li>{t("about.li3")}</li>
+                <li>{t("about.li4")}</li>
               </ul>
+
+              <p>{t("about.intro2.note1")}</p>
+              <p>{t("about.intro2.note2")}</p>
 
               <p>{t("about.intro3")}</p>
             </div>
@@ -64,7 +69,6 @@ export default function AboutPage() {
                 <ul className="list-disc list-inside ml-2">
                   <li>{t("about.rule.li1")}</li>
                   <li>{t("about.rule.li2")}</li>
-                  <li>{t("about.rule.li3")}</li>
                 </ul>
               </div>
 
@@ -75,9 +79,11 @@ export default function AboutPage() {
 
               <div>
                 <h3 className="font-bold text-[#FFD700]">{t("about.rule.title6")}</h3>
+                <p>{t("about.rule.special1")}</p>
+                <p className="mt-2">{t("about.rule.dessertTitle")}</p>
                 <ul className="list-disc list-inside ml-2">
-                  <li>{t("about.rule.li4")}</li>
-                  <li>{t("about.rule.li5")}</li>
+                  <li>{t("about.rule.dessertNote1")}</li>
+                  <li>{t("about.rule.dessertNote2")}</li>
                 </ul>
               </div>
 

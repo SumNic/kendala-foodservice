@@ -6,24 +6,14 @@ import { useEffect, useState } from "react"
 import { Header } from "@/components/header"
 import { useLanguage } from "@/components/language-provider"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Upload, Download, Search } from "lucide-react"
-import { authApi, commonApi, menuApi, ordersApi } from "@/lib/api"
+import { authApi, commonApi, dropboxApi, menuApi, ordersApi } from "@/lib/api"
 import * as XLSX from "xlsx"
 import { useOrders } from "@/components/orders-provider"
+import { BANNER, TEST_INDEX } from "@/lib/constants"
 import {
   Dialog,
   DialogContent,
@@ -32,7 +22,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
-import { Switch } from "@/components/ui/switch"
+import {
+  AdminAuthCard,
+  type LoginMethod,
+  type LoginType,
+  type LoginData,
+  type RegistrationData,
+} from "@/components/admin/AdminAuthCard"
+import { AdminMenuTab } from "@/components/admin/AdminMenuTab"
+import { AdminOrdersTab } from "@/components/admin/AdminOrdersTab"
+import { AdminSettingsTab } from "@/components/admin/AdminSettingsTab"
 
 interface BaseStyles {
   default: string
@@ -51,23 +50,27 @@ export default function AdminPage() {
     getOrders,
     isMaintenanceMode,
     setIsMaintenanceMode,
+    isBannerVisible,
+    setIsBannerVisible,
+    banner,
+    setBanner
   } = useOrders()
   const { toast } = useToast()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [loginData, setLoginData] = useState({ login: "", password: "" })
+  const [loginData, setLoginData] = useState<LoginData>({ login: "", password: "" })
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [isRegistering, setIsRegistering] = useState(false)
   const [showCodeField, setShowCodeField] = useState(false)
-  const [registrationData, setRegistrationData] = useState({
+  const [registrationData, setRegistrationData] = useState<RegistrationData>({
     name: "",
     login: "",
     password: "",
     method: "telegram",
     code: "",
   })
-  const [loginMethod, setLoginMethod] = useState<"telegram_id" | "whatsapp" | "e-mail">("e-mail")
-  const [loginType, setLoginType] = useState<"phone" | "email" | undefined>()
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>("e-mail")
+  const [loginType, setLoginType] = useState<LoginType>()
   const [dishes, setDishes] = useState<string>()
   const [openOrderId, setOpenOrderId] = useState<string | null>(null)
   const [isExportOpen, setIsExportOpen] = useState(false)
@@ -79,6 +82,9 @@ export default function AdminPage() {
     to: new Date(),
   })
   const [isLoadingExport, setIsLoadingExport] = useState(false)
+  const [activeTab, setActiveTab] = useState("menu")
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false)
 
   const normalizePhone = (val: string) => val.replace(/[^\d]/g, "") // только цифры
 
@@ -117,6 +123,13 @@ export default function AdminPage() {
     }
   }, [token, hash])
 
+  useEffect(() => {
+    const storedTab = localStorage.getItem("admin_active_tab")
+    if (storedTab === "menu" || storedTab === "orders" || storedTab === "settings") {
+      setActiveTab(storedTab)
+    }
+  }, [])
+
   const handleToggleMaintenance = async (switchValue: boolean) => {
     const siteOnline = {
       site_constants: [{ id: "site_online", value: switchValue ? 1 : 0 }],
@@ -148,6 +161,46 @@ export default function AdminPage() {
       toast({
         title: t("common.error"),
         description: "Ошибка при изменении состояния сайта",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleToggleBannerVisible = async (switchValue: boolean) => {
+    const bannerVisible = {
+      lang_vls: {
+        banner: {
+          1: JSON.stringify({ id: "banner_visible", value: switchValue ? 1 : 0 }),
+        },
+      },
+    }
+
+    try {
+      const res = await commonApi.setBannerStatus({
+        data: JSON.stringify(bannerVisible),
+        token: token,
+        u_hash: hash,
+      })
+
+      if (res.success) {
+        setIsBannerVisible(switchValue)
+
+        toast({
+          title: t("common.success"),
+          description: `Баннер ${switchValue ? "включён" : "выключен"}`,
+        })
+      } else {
+        toast({
+          title: t("common.error"),
+          description: res.error || "Не удалось изменить состояние баннера",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: t("common.error"),
+        description: "Ошибка при изменении состояния баннера",
         variant: "destructive",
       })
     }
@@ -280,7 +333,7 @@ export default function AdminPage() {
         const dataDishes = {
           lang_vls: {
             dishes: {
-              1: JSON.stringify(jsonData),
+              [TEST_INDEX]: JSON.stringify(jsonData),
             },
           },
         }
@@ -350,6 +403,89 @@ export default function AdminPage() {
       })
       await getOrders()
     } catch (error) {}
+  }
+
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        resolve(reader.result as string)
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+
+  const handleBannerUpload = async () => {
+    if (!bannerFile) {
+      toast({
+        title: t("common.error"),
+        description: "Пожалуйста, выберите изображение",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!bannerFile.type.startsWith("image/")) {
+      toast({
+        title: t("common.error"),
+        description: "Поддерживаются только изображения",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsUploadingBanner(true)
+      const base64 = await fileToBase64(bannerFile)
+      const filePayload = banner?.dlId
+        ? JSON.stringify({
+            dl_id: banner.dlId,
+            base64,
+          })
+        : JSON.stringify({
+            base64,
+            name: `${BANNER}.${bannerFile.name.split(".").pop()?.toLowerCase() || "png"}`,
+            private: -1,
+          })
+
+      const res = await dropboxApi.uploadFile({
+        file: filePayload,
+        token: token,
+        u_hash: hash,
+      })
+
+      if (res.success) {
+        toast({
+          title: t("common.success"),
+          description: "Баннер успешно загружен",
+        })
+        
+        const dlId = res.data.data.dl_id
+        setBannerFile(null)
+        setBanner({
+          url: `https://ibronevik.ru/taxi/api/v1/dropbox/file/${dlId}`,
+          dlId: dlId,
+        })
+      } else {
+        toast({
+          title: t("common.error"),
+          description:
+            typeof res.error === "string" && res.error.trim()
+              ? res.error
+              : "Не удалось загрузить баннер",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: t("common.error"),
+        description: "Ошибка при загрузке баннера",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploadingBanner(false)
+    }
   }
 
   const handleToggle = (orderId: string) => {
@@ -441,156 +577,22 @@ export default function AdminPage() {
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle>{isRegistering ? "Регистрация" : t("admin.login")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {isRegistering ? (
-                  <>
-                    <div>
-                      <Label htmlFor="reg-name">Имя</Label>
-                      <Input
-                        id="reg-name"
-                        value={registrationData.name}
-                        onChange={(e) =>
-                          setRegistrationData({
-                            ...registrationData,
-                            name: e.target.value,
-                          })
-                        }
-                        placeholder="Иван Иванович Иванов"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reg-login">Логин (телефон или e-mail)</Label>
-                      <Input
-                        id="reg-login"
-                        value={registrationData.login}
-                        onChange={(e) =>
-                          setRegistrationData({
-                            ...registrationData,
-                            login: e.target.value,
-                          })
-                        }
-                        placeholder="+7xxx или your@mail.com"
-                      />
-                      <Label htmlFor="reg-password">Пароль</Label>
-                      <Input
-                        id="reg-password"
-                        type="password"
-                        value={registrationData.password}
-                        onChange={(e) =>
-                          setRegistrationData({
-                            ...registrationData,
-                            password: e.target.value,
-                          })
-                        }
-                        placeholder="kendala2024"
-                      />
-                    </div>
-
-                    {/* если логин похоже на телефон, предлагаем выбрать метод */}
-                    {loginType === "phone" && !showCodeField && (
-                      <div>
-                        <Label>Способ регистрации</Label>
-                        <select
-                          className="w-full border rounded-md px-2 py-1"
-                          value={registrationData.method}
-                          onChange={(e) =>
-                            setRegistrationData({
-                              ...registrationData,
-                              method: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="telegram">Telegram</option>
-                          <option value="whatsapp">WhatsApp</option>
-                        </select>
-                      </div>
-                    )}
-                    {/* поле ввода кода после нажатия «Сохранить» */}
-                    {loginType === "phone" && registrationData.method === "telegram" && (
-                      <div>
-                        <Label htmlFor="reg-code">ID Телеграм</Label>
-                        <Input
-                          id="reg-code"
-                          value={registrationData.code}
-                          onChange={(e) =>
-                            setRegistrationData({
-                              ...registrationData,
-                              code: e.target.value,
-                            })
-                          }
-                          placeholder="123456789"
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <Label htmlFor="username">Логин (телефон или e-mail)</Label>
-                      <Input
-                        id="username"
-                        value={loginData.login}
-                        onChange={(e) => setLoginData({ ...loginData, login: e.target.value })}
-                        placeholder="+7xxx или your@mail.com"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="password">Пароль</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={loginData.password}
-                        onChange={(e) =>
-                          setLoginData({
-                            ...loginData,
-                            password: e.target.value,
-                          })
-                        }
-                        placeholder="kendala2024"
-                        required
-                      />
-                    </div>
-
-                    {/* если пароль пуст и логин похож на телефон, показываем выбор метода */}
-                    {loginType === "phone" && (
-                      <div>
-                        <Label>Способ входа</Label>
-                        <select
-                          className="w-full border rounded-md px-2 py-1"
-                          value={loginMethod}
-                          onChange={(e) =>
-                            setLoginMethod(e.target.value as "telegram_id" | "whatsapp")
-                          }
-                        >
-                          <option value="telegram_id">Telegram</option>
-                          <option value="whatsapp">WhatsApp</option>
-                        </select>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <Button onClick={isRegistering ? handleRegister : handleLogin} className="w-full">
-                  {isRegistering ? (showCodeField ? "Подтвердить" : "Сохранить") : t("admin.login")}
-                </Button>
-
-                <div className="text-center">
-                  <Button
-                    variant="link"
-                    onClick={() => {
-                      setIsRegistering(!isRegistering)
-                      setShowCodeField(false)
-                    }}
-                  >
-                    {isRegistering ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminAuthCard
+              isRegistering={isRegistering}
+              showCodeField={showCodeField}
+              loginData={loginData}
+              registrationData={registrationData}
+              loginType={loginType}
+              loginMethod={loginMethod}
+              setLoginData={setLoginData}
+              setRegistrationData={setRegistrationData}
+              setIsRegistering={setIsRegistering}
+              setShowCodeField={setShowCodeField}
+              setLoginMethod={setLoginMethod}
+              onLogin={handleLogin}
+              onRegister={handleRegister}
+              t={t}
+            />
           </div>
         </div>
       </div>
@@ -605,204 +607,59 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{t("admin.title")}</h1>
-            <div className="mt-2 flex items-center gap-2">
-              <Switch
-                checked={isMaintenanceMode}
-                onCheckedChange={handleToggleMaintenance}
-                id="maintenance-mode"
-              />
-              <Label htmlFor="maintenance-mode" className="text-sm text-gray-700">
-                Сайт на техобслуживании (показать предупреждение и отключить заказ)
-              </Label>
-            </div>
           </div>
           <Button variant="outline" onClick={() => handleLogout()}>
             {t("admin.logout")}
           </Button>
         </div>
 
-        <Tabs defaultValue="menu" className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value)
+            localStorage.setItem("admin_active_tab", value)
+            if (value === "orders") {
+              void getOrders()
+            }
+          }}
+          className="space-y-6"
+        >
           <TabsList>
             <TabsTrigger value="menu">{t("admin.uploadMenu")}</TabsTrigger>
-            <TabsTrigger value="orders" onClick={() => getOrders()}>
-              {t("admin.orders")}
-            </TabsTrigger>
+            <TabsTrigger value="orders">{t("admin.orders")}</TabsTrigger>
+            <TabsTrigger value="settings">Настройки</TabsTrigger>
           </TabsList>
 
           <TabsContent value="menu">
-            <Card>
-              <CardHeader>
-                <CardTitle>Загрузка меню на неделю</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="menu-file">Выберите файл Excel (.xlsx)</Label>
-                  <Input
-                    id="menu-file"
-                    type="file"
-                    accept=".xlsx"
-                    onChange={handleMenuShoose}
-                    className="mt-2"
-                  />
-                </div>
-                <div className="text-sm text-gray-600">
-                  <p>Формат файла:</p>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>
-                      Колонка day с номерами для каждого дня недели (Понедельник - 1 ... Пятница -
-                      5)
-                    </li>
-                    <li>3 блюда на каждый день</li>
-                    <li>Колонки: day, name, description, calories</li>
-                  </ul>
-                </div>
-                <Button className="flex items-center gap-2" onClick={handleMenuUpload}>
-                  <Upload className="h-4 w-4" />
-                  Загрузить меню
-                </Button>
-              </CardContent>
-            </Card>
+            <AdminMenuTab onMenuFileChange={handleMenuShoose} onMenuUpload={handleMenuUpload} />
           </TabsContent>
 
           <TabsContent value="orders">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Управление заказами</span>
-                  <Button
-                    onClick={() => setIsExportOpen(true)}
-                    variant="outline"
-                    className="flex items-center gap-2 bg-transparent"
-                  >
-                    <Download className="h-4 w-4" />
-                    Экспорт в Excel
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4 mb-6">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Поиск по имени, телефону, офису..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="all">Все статусы</option>
-                    <option value="new">Новые</option>
-                    <option value="accepted">Принятые</option>
-                    <option value="paid">Оплаченные</option>
-                    <option value="delivered">Доставленные</option>
-                  </select>
-                </div>
-
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Клиент</TableHead>
-                        <TableHead>Телефон</TableHead>
-                        <TableHead>Офис</TableHead>
-                        <TableHead>Дата доставки</TableHead>
-                        <TableHead>Статус</TableHead>
-                        <TableHead>Сумма</TableHead>
-                        <TableHead>Оплата</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOrders.map((order, i) => (
-                        <TableRow key={order.id || i}>
-                          <TableCell className="font-mono">{order.id}</TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{order.customer.fullName}</div>
-                              <div className="text-sm text-gray-600">{order.customer.company}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{order.customer.phone}</TableCell>
-                          <TableCell>{order.customer.office}</TableCell>
-                          <TableCell>
-                            {order.orderDays.map((day, index) => (
-                              <div key={`${index}`}>
-                                {new Date(day.date).toLocaleDateString("ru-RU")}
-                                <br />
-                              </div>
-                            ))}
-                          </TableCell>
-                          <TableCell
-                            onClick={() => {
-                              if (order.id) handleToggle(order.id)
-                            }}
-                            style={{ position: "relative", cursor: "pointer" }}
-                          >
-                            {order.status && getStatusBadge(order.status)}
-                            {openOrderId === order.id && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "70%",
-                                  left: 0,
-                                  background: "white",
-                                  border: "1px solid #d1d5db",
-                                  borderRadius: "0.375rem",
-                                  zIndex: 10,
-                                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                                  minWidth: "120px",
-                                }}
-                              >
-                                {Object.entries(statusMap).map(([value, status]) => (
-                                  <div
-                                    key={value}
-                                    onClick={() => {
-                                      if (order.id) handleStatusChange(order.id, value)
-                                    }}
-                                    className={`py-2 px-3 cursor-pointer transition-colors text-sm
-                                                         ${
-                                                           order.status === value
-                                                             ? getVariantStyle(status.variant, true)
-                                                             : getVariantStyle(
-                                                                 status.variant,
-                                                                 false,
-                                                               )
-                                                         }
-                                                         ${value !== "delivered" ? "border-b border-gray-100" : ""}
-                                                      `}
-                                    style={{
-                                      borderBottom:
-                                        value !== "delivered" ? "1px solid #f3f4f6" : "none",
-                                    }}
-                                  >
-                                    {status.label}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>{order.total} ₸</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={order.paymentMethod === "cash" ? "outline" : "secondary"}
-                            >
-                              {order.paymentMethod === "cash" ? "Наличные" : "Счет"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminOrdersTab
+              filteredOrders={filteredOrders}
+              searchTerm={searchTerm}
+              statusFilter={statusFilter}
+              openOrderId={openOrderId}
+              statusMap={statusMap}
+              onSearchTermChange={setSearchTerm}
+              onStatusFilterChange={setStatusFilter}
+              onToggleOrder={handleToggle}
+              onStatusChange={handleStatusChange}
+              getStatusBadge={getStatusBadge}
+              getVariantStyle={getVariantStyle}
+              onExportOpen={() => setIsExportOpen(true)}
+            />
+          </TabsContent>
+          <TabsContent value="settings">
+            <AdminSettingsTab
+              isMaintenanceMode={isMaintenanceMode}
+              isBannerVisible={isBannerVisible}
+              isUploadingBanner={isUploadingBanner}
+              onToggleMaintenance={handleToggleMaintenance}
+              onToggleBannerVisible={handleToggleBannerVisible}
+              onBannerFileChange={setBannerFile}
+              onBannerUpload={handleBannerUpload}
+            />
           </TabsContent>
           <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
             <DialogContent className="space-y-4 w-auto max-w-none">

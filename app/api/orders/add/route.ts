@@ -1,6 +1,5 @@
-import { DayMenu } from "@/app/page"
-import { Order } from "@/lib/api"
 import { type NextRequest, NextResponse } from "next/server"
+import { TEST_INDEX } from "@/lib/constants"
 import sendOrderNotification from "./notify"
 
 export async function POST(request: NextRequest) {
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
         tickets: {
           seats: {
             "123": {
-              1: {
+              [TEST_INDEX]: {
                 ...orderData,
                 createdAt: new Date().toISOString(),
               },
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
           payment: "123",
         },
       },
-    }
+    }    
 
     const body = {
       data: JSON.stringify(order),
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notification
-    await sendOrderNotification(responseData.data.b_id, orderData, menu, [ 2690, 3290 ])
+    await sendOrderNotification(responseData.data.b_id, orderData, menu)
 
     return NextResponse.json({
       success: true,
