@@ -294,7 +294,7 @@ export default async function sendOrderNotifications(
       timestamp: order.timestamp,
     }
 
-    if (IS_SEND_NOTIFICATION) return
+    if (IS_SEND_NOTIFICATION === 0) return
 
     const results = await Promise.allSettled([
       sendEmailNotification(id, orderData),
