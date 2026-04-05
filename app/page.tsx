@@ -44,6 +44,7 @@ import {
   PRICE_DISHES,
   TEST_INDEX,
 } from "@/lib/constants"
+import { getMockDate, getMockTimeLabel } from "@/lib/mock-time"
 
 export interface Dish {
   id: string
@@ -86,9 +87,10 @@ export default function OrderPage() {
   const [isBannerReady, setIsBannerReady] = useState(false)
   const [bannerSize, setBannerSize] = useState<{ width: number; height: number } | null>(null)
   const [isBannerImageLoaded, setIsBannerImageLoaded] = useState(false)
+  const mockTimeLabel = getMockTimeLabel()
 
   useEffect(() => {
-    const now = new Date()
+    const now = getMockDate()
     const hours = now.getHours()
     const minutes = now.getMinutes()
     const isAfterOrderStart =
@@ -98,7 +100,7 @@ export default function OrderPage() {
 
     // Check if ordering is allowed based on current time
     const interval = setInterval(() => {
-      const now = new Date()
+      const now = getMockDate()
       const currentDay = now.getDay()
       const hours = now.getHours()
       const minutes = now.getMinutes()
@@ -106,15 +108,17 @@ export default function OrderPage() {
         hours > ORDER_START_HOUR || (hours === ORDER_START_HOUR && minutes >= ORDER_START_MINUTS)
 
       if (isAfterOrderStart) setTimeRestrictionMessage(t("order.orderClosed"))
-      if (
-        TEST_INDEX === 1 &&
-        isAfterOrderStart &&
-        menu.length &&
-        menu[currentDay - 1]?.isAvailable !== false
-      ) {
-        const newMenu = cloneDeep(menu)
-        newMenu[currentDay - 1].isAvailable = false
-        setMenu(newMenu)
+      if (TEST_INDEX === 1 && menu.length) {
+        if (
+          isAfterOrderStart &&
+          currentDay >= 1 &&
+          currentDay <= 5 &&
+          menu[currentDay - 1]?.isAvailable !== false
+        ) {
+          const newMenu = cloneDeep(menu)
+          newMenu[currentDay - 1].isAvailable = false
+          setMenu(newMenu)
+        }
       }
     }, 1000 * 60) // проверка каждую минуту
 
@@ -444,6 +448,14 @@ export default function OrderPage() {
             <Alert className="bg-red-50 border-red-200 flex mt-4">
               <Clock className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">{timeRestrictionMessage}</AlertDescription>
+            </Alert>
+          )}
+          {mockTimeLabel && (
+            <Alert className="bg-amber-50 border-amber-300 flex mt-4">
+              <Clock className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                ⏰ Mock time: {mockTimeLabel} — remove <code className="bg-amber-100 px-1 rounded">?mockTime=...</code> from URL to restore real time.
+              </AlertDescription>
             </Alert>
           )}
         </div>

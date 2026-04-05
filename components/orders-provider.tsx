@@ -15,6 +15,7 @@ import {
   TEST_INDEX,
   BANNER,
 } from "@/lib/constants"
+import { getMockDate } from "@/lib/mock-time"
 
 type WeekDay = {
   day: string
@@ -91,28 +92,29 @@ export const OrdersProvider: React.FC<{
   }
 
   function getNoAvailableDays(menu: DayMenu[]) {
-    const now = new Date()
+    const now = getMockDate()
     const currentDay = now.getDay()
     const hours = now.getHours()
     const minutes = now.getMinutes()
     const isAfterOrderStart =
       hours > ORDER_START_HOUR ||
       (hours === ORDER_START_HOUR && minutes >= ORDER_START_MINUTS)
+    const effectiveDay = currentDay === 0 ? 7 : currentDay
 
     const blockDaysMenu = menu.map((item, numberDay) => {
       if (TEST_INDEX === 1) {
-        if (isAfterOrderStart && numberDay + 1 <= currentDay) {
-        return {
-          ...item,
-          isAvailable: false,
+        if (numberDay + 1 < effectiveDay) {
+          return {
+            ...item,
+            isAvailable: false,
+          }
         }
-      }
-      if (numberDay + 1 < currentDay) {
-        return {
-          ...item,
-          isAvailable: false,
+        if (isAfterOrderStart && numberDay + 1 === effectiveDay) {
+          return {
+            ...item,
+            isAvailable: false,
+          }
         }
-      }
       }
       return {
         ...item,
@@ -125,7 +127,7 @@ export const OrdersProvider: React.FC<{
   function getCurrentWeekDays() {
     const days = ["monday", "tuesday", "wednesday", "thursday", "friday"]
 
-    const today = new Date()
+    const today = getMockDate()
     const nextDay = today.getDay() // 0 (вс) - 6 (сб)
     const diffToMonday = (nextDay + 6) % 7 // сдвиг к понедельнику
 
